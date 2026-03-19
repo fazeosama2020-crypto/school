@@ -746,67 +746,123 @@ tr:hover td{background:var(--green-pale)}
 const TEACHER_CRITERIA = [
   {id:'t1',title:'أداء الواجبات الوظيفية',weight:'10%',icon:'📋',color:'#2e7d32',bg:'#e8f5e9',
     description:'يلتزم المعلم بالدوام والجدول الدراسي والإشراف والمناوبة ويُعدّ دروسه وواجباته واختباراته.',
-    examples:['التقيد بالدوام الرسمي','تأدية الحصص وفق الجدول الدراسي','المشاركة في الإشراف والمناوبة وحصص الانتظار','إعداد ومتابعة الدروس والواجبات والاختبارات'],
+    paragraphs:[
+      'المشاركة في الفعاليات الوطنية مثل الأعياد والمناسبات العامة',
+      'تعزيز قيم المواطنة لدى الطلاب من خلال الأنشطة الصفية واللاصفية',
+      'التعاون مع المؤسسات الحكومية في المبادرات الوطنية',
+      'تنظيم أنشطة توعوية حول أهمية الانتماء الوطني'
+    ],
     witnesses:['سجل الدوام','سجل المناوبة والإشراف اليومي','سجل الانتظار','خطة توزيع المنهج'],
     levels:[{r:1,text:'يُظهر الحد الأدنى للواجبات ويتأخر باستمرار دون مبرر'},{r:2,text:'التزام محدود ويحتاج توجيهاً متكرراً'},{r:3,text:'التزام جيد بالواجبات الأساسية ومواعيد العمل معظم الوقت'},{r:4,text:'يلتزم بوضوح دون توجيه مستمر ويحرص على تحسين الأداء'},{r:5,text:'يلتزم تماماً ويبادر استباقياً لتحمل المسؤوليات ويكون حاضراً قبل الوقت المطلوب'}]
   },
   {id:'t2',title:'التفاعل مع المجتمع المهني',weight:'10%',icon:'🤝',color:'#1565c0',bg:'#e3f2fd',
     description:'المشاركة الفاعلة في مجتمعات التعلم المهنية وتبادل الخبرات والزيارات والدورات التدريبية.',
-    examples:['المشاركة الفاعلة في مجتمعات التعلم المهنية','تبادل الزيارات مع الزملاء','الدروس التطبيقية وبحث الدرس','حضور الدورات والورش التدريبية'],
+    paragraphs:[
+      'حضور المؤتمرات والندوات التعليمية',
+      'المشاركة في ورش العمل التدريبية لتحسين المهارات التعليمية',
+      'تقديم استشارات تربوية للمعلمين الجدد',
+      'إطلاق مبادرات تعليمية لتحسين جودة التعليم',
+      'الالتحاق ببرامج تدريبية لتعلم أساليب تدريس حديثة',
+      'الحصول على شهادات مهنية معتمدة في مجال التعليم',
+      'تبادل الخبرات مع المعلمين من مدارس أخرى'
+    ],
     witnesses:['سجل مجتمعات التعلم المهنية','سجل تبادل الزيارات','تقرير تنفيذ درس تطبيقي','شهادات حضور الدورات والورش التدريبية'],
     levels:[{r:1,text:'يُظهر الحد الأدنى من الاهتمام بالتفاعل مع المجتمع المهني'},{r:2,text:'يتواجد في الأنشطة دون مشاركة فعالة'},{r:3,text:'يشارك في بعض الفعاليات بشكل غير منتظم أو عند الطلب'},{r:4,text:'يشارك بانتظام ويُظهر تفاعلاً إيجابياً مع الزملاء'},{r:5,text:'يشارك استباقياً في جميع الفعاليات ويشجع الآخرين ويُظهر استعداداً دائماً للمساعدة'}]
   },
   {id:'t3',title:'التفاعل مع أولياء الأمور',weight:'10%',icon:'👨‍👩‍👧',color:'#6a1b9a',bg:'#f3e5f5',
     description:'التواصل الفعال مع أولياء الأمور وتزويدهم بمستويات أبنائهم وتفعيل الخطة الأسبوعية.',
-    examples:['التواصل الفعال مع أولياء الأمور بالتنسيق مع الموجه الطالبي','تزويد أولياء الأمور بمستويات الطالب','إيصال الملاحظات الهامة لأولياء الأمور','تفعيل الخطة الأسبوعية للمدرسة','المشاركة الفاعلة في الجمعية العمومية'],
+    paragraphs:[
+      'تنظيم اجتماعات دورية مع أولياء الأمور لمناقشة تقدم الطلاب',
+      'إرسال تقارير منتظمة عن أداء الطلاب أكاديمياً وسلوكياً',
+      'استخدام وسائل التواصل الحديثة مثل البريد الإلكتروني أو التطبيقات التعليمية لإبقاء أولياء الأمور على اطلاع',
+      'الاستماع لملاحظات أولياء الأمور والعمل على تحسين الأداء بناءً عليها'
+    ],
     witnesses:['صور من الجمعية العمومية لأولياء الأمور والمعلمين','تقرير اجتماع ولي الأمر مع المعلم','نسخة من الخطة الأسبوعية للمدرسة'],
     levels:[{r:1,text:'نادراً ما يشارك في التواصل مع أولياء الأمور'},{r:2,text:'تواصل محدود عند الطلب فقط'},{r:3,text:'يشارك عند الحاجة ويقدم معلومات كافية'},{r:4,text:'يتواصل بانتظام ويستجيب للأسئلة والمخاوف بسرعة'},{r:5,text:'يبادر بالتواصل الدائم ويقدم معلومات دقيقة وشاملة تساهم في التطوير المستمر'}]
   },
   {id:'t4',title:'التنويع في استراتيجيات التدريس',weight:'10%',icon:'🎯',color:'#e65100',bg:'#fff3e0',
     description:'استخدام استراتيجيات تدريس متنوعة تتناسب مع مستويات الطلاب وتراعي الفروق الفردية.',
-    examples:['استخدام استراتيجيات تدريس متنوعة','تناسب مستويات الطلاب','مراعاة الفروق الفردية بين المتعلمين'],
+    paragraphs:[
+      'استخدام التعلم النشط مثل المناقشات الجماعية والعروض التقديمية',
+      'تطبيق التعلم القائم على المشاريع لتعزيز الإبداع وحل المشكلات',
+      'استخدام الوسائل البصرية والسمعية مثل الفيديوهات والصور',
+      'تخصيص أنشطة تعليمية تناسب أنماط التعلم المختلفة (بصري، سمعي، حركي)'
+    ],
     witnesses:['تقرير عن تطبيق استراتيجية تدريسية','ملف إنجاز المعلم'],
     levels:[{r:1,text:'يعتمد على طرق التدريس التقليدية المباشرة فقط دون إشراك المتعلمين'},{r:2,text:'استراتيجيات تقليدية مع استخدام محدود لبعض الطرق الحديثة'},{r:3,text:'يستخدم استراتيجيات متنوعة وفعالة بشكل غير منتظم'},{r:4,text:'يُظهر استعداداً لتجربة استراتيجيات جديدة تتناسب مع أهداف الدرس واحتياجات المتعلمين'},{r:5,text:'يُكيّف استراتيجيات التدريس فردياً بناءً على احتياجات كل طالب بمهارة استثنائية'}]
   },
   {id:'t5',title:'تحسين نتائج المتعلمين',weight:'10%',icon:'📈',color:'#00695c',bg:'#e0f2f1',
     description:'معالجة الفاقد التعليمي ووضع خطط علاجية وإثرائية وتكريم الطلاب المتميزين.',
-    examples:['معالجة الفاقد التعليمي','وضع الخطط العلاجية للطلاب الضعاف','وضع الخطط الإثرائية للطلاب المتميزين','تكريم الطلاب المتميزين والذين تحسّن مستواهم'],
+    paragraphs:[
+      'تقديم دروس إضافية للطلاب الذين يحتاجون إلى دعم',
+      'استخدام أساليب تقييم مستمرة لتحديد نقاط الضعف والعمل على تحسينها',
+      'تشجيع الطلاب على المشاركة في المسابقات الأكاديمية',
+      'توفير مصادر تعليمية إضافية مثل الكتب الإلكترونية والمواقع التعليمية'
+    ],
     witnesses:['نتائج الاختبار القبلي والبعدي','كشف متابعة الطلاب'],
     levels:[{r:1,text:'نادراً ما يوفر دعماً للمتعلمين الذين يواجهون صعوبات'},{r:2,text:'يوفر بعض الدعم لكنه غير كافٍ لتحسين الأداء بشكل ملموس'},{r:3,text:'يُقدم دعماً إضافياً لذوي الأداء الضعيف مع متابعة غير منتظمة'},{r:4,text:'يُقدم دعماً مخصصاً ويضع أهدافاً واضحة ويتابع التقدم بانتظام'},{r:5,text:'يُقدم دعماً استباقياً مخصصاً لكل متعلم بناءً على احتياجاته الفردية بتميز واضح'}]
   },
   {id:'t6',title:'إعداد وتنفيذ خطة التعلم',weight:'10%',icon:'📝',color:'#283593',bg:'#e8eaf6',
     description:'توزيع المنهج وإعداد الدروس والواجبات والاختبارات وتنفيذها بفعالية.',
-    examples:['توزيع المنهج وإعداد الدروس','إعداد الواجبات والاختبارات','تنفيذ الدروس بشكل فعّال'],
+    paragraphs:[
+      'وضع أهداف تعليمية واضحة وقابلة للقياس',
+      'تصميم خطط دراسية تتوافق مع المنهج الدراسي واحتياجات الطلاب',
+      'مراجعة الخطط بشكل دوري وتعديلها بناءً على نتائج الطلاب',
+      'مشاركة الخطط مع الزملاء للحصول على ملاحظات وتحسينها'
+    ],
     witnesses:['خطة توزيع المنهج','نموذج من إعداد الدروس','نماذج من الواجبات والاختبارات'],
     levels:[{r:1,text:'نادراً ما يعد خطة التعلم ويعتمد على التدريس المباشر دون إعداد مسبق'},{r:2,text:'يعد خطة بأهداف غير واضحة ويعتمد على المواد الجاهزة دون تطوير المحتوى'},{r:3,text:'يعد خطة بأهداف واضحة لكن لا تراعي الفروق الفردية ولا تغطي المحتوى بالكامل'},{r:4,text:'يعد خطة بأهداف واضحة وقابلة للقياس تراعي الفروق الفردية وتلبي جميع الاحتياجات'},{r:5,text:'يعد خطة متكاملة بأهداف مبتكرة ويكيّفها وفق احتياجات جميع المتعلمين بأساليب متنوعة'}]
   },
   {id:'t7',title:'توظيف تقنيات ووسائل التعلم المناسبة',weight:'10%',icon:'💻',color:'#00838f',bg:'#e0f7fa',
     description:'دمج التقنية في التعليم والتنويع في الوسائل التعليمية لتحسين العملية التعليمية.',
-    examples:['دمج التقنية في التعليم بفاعلية','التنويع في الوسائل التعليمية المستخدمة'],
+    paragraphs:[
+      'دمج التقنية في التعليم بفاعلية واستخدام السبورة الذكية والتطبيقات التعليمية',
+      'استخدام منصة مدرستي والمنصات الرقمية في تقديم المحتوى التعليمي',
+      'توظيف الفيديوهات التعليمية والعروض التقديمية في الشرح',
+      'التنويع في الوسائل التعليمية الرقمية والمادية وفق طبيعة الدرس'
+    ],
     witnesses:['صور من الوسائل التعليمية المستخدمة','تقرير عن برنامج تقني تم استخدامه'],
     levels:[{r:1,text:'نادراً ما يستخدم التقنيات والوسائل التعليمية المناسبة'},{r:2,text:'يستخدم التقنيات بشكل محدود ولا تتناسب مع المحتوى التعليمي'},{r:3,text:'يستخدم أغلب التقنيات المناسبة بشكل منتظم'},{r:4,text:'يستخدم جميع التقنيات المتوفرة بانتظام وتعزز فعالية الدروس'},{r:5,text:'يُظهر مهارة استثنائية في دمج التقنيات الحديثة بسلاسة مع تحسين تفاعل المتعلمين'}]
   },
   {id:'t8',title:'تهيئة البيئة التعليمية',weight:'5%',icon:'🌱',color:'#558b2f',bg:'#f1f8e9',
     description:'مراعاة حاجات الطلاب والتهيئة النفسية والتحفيز وتوفير متطلبات الدرس.',
-    examples:['مراعاة حاجات الطلاب','التهيئة النفسية للطلاب','التحفيز المادي والمعنوي','توفير متطلبات الدرس'],
+    paragraphs:[
+      'تزيين الفصل بوسائل تعليمية جذابة ومحفزة للتعلم',
+      'تنظيم الفصل بشكل يسهل الحركة والتفاعل بين الطلاب',
+      'توفير الأدوات والموارد التعليمية اللازمة لكل درس'
+    ],
     witnesses:['تقرير تصنيف الطلاب وفق أنماط التعلم','نماذج من التحفيز المادي والمعنوي'],
     levels:[{r:1,text:'نادراً ما يخلق بيئة تعليمية محفزة أو داعمة للتعلم النشط'},{r:2,text:'يبني بيئة تعزز فهم الطالب بشكل جزئي'},{r:3,text:'يبني بيئة تعزز فهم الطالب وتراعي الفروق الفردية'},{r:4,text:'يبني بيئة معززة ومحفزة وفق احتياجات المتعلمين'},{r:5,text:'يبني بيئة آمنة محفزة تستدعي خبرات المتعلمين وتنمّي مهاراتهم وتستند على دروسهم السابقة'}]
   },
   {id:'t9',title:'الإدارة الصفية',weight:'5%',icon:'👥',color:'#c62828',bg:'#ffebee',
     description:'ضبط سلوك الطلاب وشد انتباههم ومراعاة الفروق الفردية ومتابعة الحضور والغياب.',
-    examples:['ضبط سلوك الطلاب','شد انتباه الطلاب وتحفيزهم','مراعاة الفروق الفردية','متابعة الحضور والغياب والتأخر'],
+    paragraphs:[
+      'وضع قواعد واضحة للصف والحرص على تطبيقها بثبات',
+      'استخدام تقنيات فعّالة لشد انتباه الطلاب وتحفيزهم على المشاركة',
+      'التعامل بحكمة مع المشكلات السلوكية وتحويلها لفرص تعليمية',
+      'متابعة الحضور والغياب والتأخر وتوثيقه يومياً'
+    ],
     witnesses:['كشف المتابعة للحضور والغياب','تطبيق نموذج إدارة الصف'],
     levels:[{r:1,text:'نادراً ما يدير الصف بفاعلية'},{r:2,text:'يدير الصف دون مراعاة القوانين والتعليمات الصفية'},{r:3,text:'يدير الصف بفاعلية ويوجّه المتعلمين لتطبيق القوانين الصفية'},{r:4,text:'يدير الصف بفاعلية ويوفر بيئة ممتعة مع فرص متكافئة للإجابة'},{r:5,text:'يدير الصف بكفاءة عالية ويبني علاقات إيجابية ويوفر بيئة محفزة تستثير المعرفة'}]
   },
   {id:'t10',title:'تحليل نتائج المتعلمين وتشخيص مستوياتهم',weight:'10%',icon:'📊',color:'#4527a0',bg:'#ede7f6',
     description:'تحليل نتائج الاختبارات وتصنيف الطلاب وتحديد نقاط القوة والضعف ومعالجة الفاقد.',
-    examples:['تحليل نتائج الاختبارات الفترية والنهائية','تصنيف الطلاب وفق نتائجهم','معالجة الفاقد التعليمي','تحديد نقاط القوة والضعف'],
+    paragraphs:[
+      'تحليل نتائج الاختبارات الفترية والنهائية لكل طالب وللصف كاملاً',
+      'تصنيف الطلاب إلى مستويات (متميز، جيد، يحتاج دعم) بناءً على التحليل',
+      'تحديد الأسئلة والمفاهيم التي أخفق فيها الطلاب ووضع خطة معالجة',
+      'رفع تقرير دوري بنتائج التحليل ومقترحات التحسين للإدارة'
+    ],
     witnesses:['تقرير تحليل نتائج الطلاب','سجل معالجة الفاقد التعليمي'],
     levels:[{r:1,text:'نادراً ما يحلل نتائج المتعلمين بشكل منهجي'},{r:2,text:'يُجري تحليلاً محدوداً دون أدوات أو أساليب دقيقة'},{r:3,text:'يُجري تحليلاً أساسياً باستخدام بعض الأدوات المتاحة'},{r:4,text:'يُجري تحليلاً دقيقاً وشاملاً ويقدم تشخيصاً مع توصيات مخصصة'},{r:5,text:'يُجري تحليلاً متقدماً باستخدام تقنيات تحليل البيانات ويضع خطط تطوير فردية'}]
   },
   {id:'t11',title:'تنويع أساليب التقويم',weight:'10%',icon:'✅',color:'#2e7d32',bg:'#e8f5e9',
     description:'تطبيق الاختبارات الورقية والإلكترونية والمشاريع والمهام الأدائية وملفات إنجاز الطلاب.',
-    examples:['تطبيق الاختبارات الورقية والإلكترونية','المشاريع الطالبية','المهام الأدائية','ملفات إنجاز الطلاب'],
+    paragraphs:[
+      'استخدام الاختبارات الكتابية والشفوية بصورة متوازنة',
+      'تطبيق التقييم العملي من خلال المشاريع والعروض التقديمية',
+      'استخدام التقييم التكويني لتتبع تقدم الطلاب بشكل مستمر ولحظي'
+    ],
     witnesses:['نماذج من الاختبارات الورقية والإلكترونية','نماذج من ملفات إنجاز الطلاب','نماذج من المهام الأدائية ومشاريع الطلاب'],
     levels:[{r:1,text:'نادراً ما يستخدم أساليب وأدوات تقييم مناسبة'},{r:2,text:'يعتمد فقط على نوع واحد من أساليب التقييم وغير شامل بشكل كافٍ'},{r:3,text:'يستخدم أساليب وأدوات تقييم مناسبة متوافقة مع طبيعة الأهداف ومخرجات التعلم'},{r:4,text:'يستخدم مجموعة متنوعة تشمل التحريري والإلكتروني والمشاريع والتقييم الشفوي'},{r:5,text:'يستخدم أساليب تقييم مبتكرة تقيس تحقق الأهداف وتقدم التعلم وتُصدر أحكاماً دقيقة على مستويات الطلاب'}]
   }
@@ -1309,12 +1365,20 @@ function renderGrid(evals,filter){
         + '</div>' + lbl + '</div>';
     }
 
-    // Witnesses required list (teacher view)
+    // Paragraphs checklist on card (teacher view)
+    const pCardColors=['#c62828','#1565c0','#2e7d32','#6a1b9a','#e65100','#00695c','#00838f'];
     let witnessesRequired = '';
-    if(isTeacherUser && c.witnesses && c.witnesses.length){
-      witnessesRequired = '<div style="margin-top:7px;padding:7px 9px;background:#f8f9ff;border:1px dashed #90caf9;border-radius:8px">'
-        + '<div style="font-size:9.5px;font-weight:700;color:#1565c0;margin-bottom:4px">📋 الشواهد المطلوبة:</div>'
-        + c.witnesses.map(w=>'<div style="font-size:10px;color:#555;padding:1.5px 0;display:flex;align-items:center;gap:4px"><span style="color:#90caf9;font-size:8px">◈</span>'+w+'</div>').join('')
+    if(isTeacherUser && c.paragraphs && c.paragraphs.length){
+      witnessesRequired = '<div style="margin-top:8px;padding:8px 10px;background:linear-gradient(135deg,#f8f9ff,#fff);border:1.5px solid #c5cae9;border-radius:10px">'
+        + '<div style="font-size:9.5px;font-weight:800;color:#1a237e;margin-bottom:6px;display:flex;align-items:center;gap:4px">'
+        + '<span>📋</span><span>فقرات التوثيق ('+c.paragraphs.length+')</span></div>'
+        + c.paragraphs.map((p,i)=>{
+            const col=pCardColors[i%pCardColors.length];
+            return '<div style="display:flex;align-items:flex-start;gap:6px;padding:3px 0;border-bottom:1px dashed #e8eaf6">'
+              + '<span style="width:14px;height:14px;border-radius:50%;background:'+col+';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;flex-shrink:0;margin-top:1px">'+(i+1)+'</span>'
+              + '<span style="font-size:10px;color:#333;line-height:1.45;font-weight:500">'+p+'</span>'
+              + '</div>';
+          }).join('')
         + '</div>';
     }
 
@@ -1483,50 +1547,50 @@ function _buildModal(c, isT, isDirEval, tName, imgCount, tEv){
   if(c.description) evDesc.innerHTML=c.description;
   else evDesc.style.display='none';
 
-  // Level rows — examples, witnesses, and performance levels
+  // Level rows — paragraphs, witnesses, and performance levels
   const evLevels=document.getElementById('evLevels');
   let evHtml = '';
 
-  // Examples section
-  if(c.examples && c.examples.length){
-    evHtml += `<div style="margin-bottom:12px">
-      <div style="font-size:11.5px;font-weight:700;color:#e65100;margin-bottom:7px;display:flex;align-items:center;gap:5px">
-        <span style="background:#fff3e0;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px">📌</span>
-        أمثلة على تحقق العنصر
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        ${c.examples.map(e=>`<div style="display:flex;align-items:flex-start;gap:7px;padding:5px 8px;background:rgba(230,81,0,.06);border-radius:7px;font-size:11.5px;color:#555">
-          <span style="color:#e65100;font-size:10px;margin-top:3px;flex-shrink:0">◈</span>${e}
-        </div>`).join('')}
-      </div>
-    </div>`;
+  // ── PARAGRAPHS (فقرات التوثيق) — most prominent section ──
+  if(c.paragraphs && c.paragraphs.length){
+    const pColors=['#c62828','#1565c0','#2e7d32','#6a1b9a','#e65100','#00695c','#00838f','#558b2f'];
+    evHtml += '<div style="margin-bottom:16px">'
+      + '<div style="font-size:12.5px;font-weight:800;color:#1a237e;margin-bottom:10px;display:flex;align-items:center;gap:7px;padding:8px 12px;background:linear-gradient(135deg,#e8eaf6,#f3f4ff);border-radius:10px;border-right:4px solid #3949ab">'
+      + '<span style="font-size:16px">📋</span>'
+      + '<span>فقرات التوثيق المطلوبة</span>'
+      + '<span style="font-size:10px;background:#3949ab;color:#fff;padding:2px 8px;border-radius:20px;margin-right:auto">' + c.paragraphs.length + ' فقرات</span>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:6px">'
+      + c.paragraphs.map((p,i)=>{
+          const col=pColors[i%pColors.length];
+          return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff;border-radius:10px;border:1.5px solid '+col+'22;box-shadow:0 1px 4px rgba(0,0,0,.06)">'
+            + '<div style="width:26px;height:26px;border-radius:50%;background:'+col+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">'+(i+1)+'</div>'
+            + '<span style="font-size:12px;font-weight:600;color:#222;line-height:1.55">'+p+'</span>'
+            + '</div>';
+        }).join('')
+      + '</div></div>';
   }
 
-  // Witnesses section
+  // ── WITNESSES (الشواهد المطلوبة) ──
   if(c.witnesses && c.witnesses.length){
-    evHtml += `<div style="margin-bottom:14px">
-      <div style="font-size:11.5px;font-weight:700;color:#1565c0;margin-bottom:7px;display:flex;align-items:center;gap:5px">
-        <span style="background:#e3f2fd;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px">🗂️</span>
-        الشواهد المطلوبة
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        ${c.witnesses.map((w,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:linear-gradient(135deg,#e3f2fd,#f0f7ff);border:1px solid #90caf9;border-radius:8px;font-size:11.5px;color:#1565c0;font-weight:600">
-          <span style="background:#1565c0;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;font-weight:700">${i+1}</span>
-          ${w}
-        </div>`).join('')}
-      </div>
-    </div>`;
+    evHtml += '<div style="margin-bottom:14px">'
+      + '<div style="font-size:11.5px;font-weight:700;color:#1565c0;margin-bottom:7px;display:flex;align-items:center;gap:5px;padding:6px 10px;background:#e3f2fd;border-radius:8px">'
+      + '<span>🗂️</span><span>الشواهد المطلوبة للتوثيق</span>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:4px">'
+      + c.witnesses.map((w,i)=>'<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:linear-gradient(135deg,#e3f2fd,#f0f7ff);border:1px solid #90caf9;border-radius:8px;font-size:11.5px;color:#1565c0;font-weight:600">'
+          + '<span style="background:#1565c0;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;font-weight:700">'+(i+1)+'</span>'
+          + w + '</div>').join('')
+      + '</div></div>';
   } else if(c.evidence){
-    evHtml += `<ul>${c.evidence.map(e=>`<li style="padding:4px 0;font-size:12px;color:var(--text-mid);border-bottom:1px dashed rgba(0,0,0,.06)">${e}</li>`).join('')}</ul>`;
+    evHtml += '<ul>'+c.evidence.map(e=>'<li style="padding:4px 0;font-size:12px;color:var(--text-mid);border-bottom:1px dashed rgba(0,0,0,.06)">'+e+'</li>').join('')+'</ul>';
   }
 
-  // Performance levels
+  // ── PERFORMANCE LEVELS ──
   if(c.levels){
     const labelColors=['','#c62828','#f57f17','#1565c0','#2e7d32','#f9a825'];
-    evHtml += `<div style="font-size:11.5px;font-weight:700;color:#333;margin-bottom:7px;display:flex;align-items:center;gap:5px">
-      <span style="background:#f5f5f5;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px">⭐</span>
-      مستويات الأداء
-    </div>`;
+    evHtml += '<div style="font-size:11.5px;font-weight:700;color:#333;margin-bottom:7px;display:flex;align-items:center;gap:5px;padding:6px 10px;background:#f5f5f5;border-radius:8px">'
+      + '<span>⭐</span><span>مستويات الأداء</span></div>';
     evHtml += c.levels.map(l=>`
       <div class="level-row lvl-${l.r} ${TMP_RATING===l.r?'selected':''}" id="lvlrow${l.r}">
         <div class="lnum">${l.r}</div>
