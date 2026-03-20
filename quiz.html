@@ -656,13 +656,19 @@ function QuizScreen({exam,answers,setAnswers,subjectIdx,setSubjectIdx,onSubmit,o
         {currentSub.questions.map((q,qi)=>(
           <div key={q.id} className="card">
             <div style={{display:"flex",gap:11,marginBottom:10}}>
-              <div style={{minWidth:30,height:30,borderRadius:8,background:answers[q.id]!==undefined?(practiceResult[q.id]===true?"#166534":practiceResult[q.id]===false?"#dc2626":"#166534"):"#1d4ed8",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800}}>{qi+1}</div>
-              <div style={{flex:1}}>
-                {q.text&&<p style={{fontSize:15,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
-                <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+              <div style={{minWidth:30,height:30,borderRadius:8,background:answers[q.id]!==undefined?(practiceResult[q.id]===true?"#166534":practiceResult[q.id]===false?"#dc2626":"#166534"):"#1d4ed8",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,flexShrink:0}}>{qi+1}</div>
+              <div style={{flex:1,display:"flex",gap:12,alignItems:"flex-start"}}>
+                <div style={{flex:1}}>
+                  {q.text&&<p style={{fontSize:15,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
+                  <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+                </div>
+                {q.image&&(
+                  <div style={{flexShrink:0,width:160}}>
+                    <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:10,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
+                  </div>
+                )}
               </div>
             </div>
-            {q.image&&<img src={q.image} alt="" style={{width:"100%",maxHeight:240,objectFit:"contain",borderRadius:10,border:"1px solid #e2e8f0",marginBottom:12}}/>}
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
               {q.options.map((opt,oi)=>{
                 if(!opt) return null;
@@ -762,14 +768,19 @@ function ResultsScreen({res,student,examTitle,exam,answers,onBack}){
                   <div key={q.id} className="card" style={{border:`2px solid ${notAnswered?"#e2e8f0":isCorrect?"#86efac":"#fca5a5"}`,padding:"14px 16px"}}>
                     <div style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
                       <div style={{minWidth:28,height:28,borderRadius:8,background:notAnswered?"#94a3b8":isCorrect?"#166534":"#dc2626",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,flexShrink:0}}>{qi+1}</div>
-                      <div style={{flex:1}}>
-                        {q.text&&<p style={{fontSize:14,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
-                        <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+                      <div style={{flex:1,display:"flex",gap:10,alignItems:"flex-start"}}>
+                        <div style={{flex:1}}>
+                          {q.text&&<p style={{fontSize:14,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
+                          <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+                        </div>
+                        {q.image&&(
+                          <div style={{flexShrink:0,width:140}}>
+                            <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:8,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
+                          </div>
+                        )}
                       </div>
                       <span style={{fontSize:18,flexShrink:0}}>{notAnswered?"⬜":isCorrect?"✅":"❌"}</span>
                     </div>
-
-                    {q.image&&<img src={q.image} alt="" style={{width:"100%",maxHeight:180,objectFit:"contain",borderRadius:8,border:"1px solid #e2e8f0",marginBottom:10}}/>}
 
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                       {q.options.map((opt,oi)=>{
@@ -1580,75 +1591,111 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
   // keep old single handler for backward compat
   const handleDroppedImage=(file)=>handleDroppedImageSlot(0,file);
 
+  // ── helper: crop a region from a dataURL using Canvas ──
+  const cropImage=(dataUrl,crop)=>new Promise(resolve=>{
+    const img=new window.Image();
+    img.onload=()=>{
+      const W=img.naturalWidth, H=img.naturalHeight;
+      const x=Math.round(crop.x*W), y=Math.round(crop.y*H);
+      const w=Math.round(crop.w*W), h=Math.round(crop.h*H);
+      const cv=document.createElement("canvas");
+      cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(img,x,y,w,h,0,0,w,h);
+      resolve(cv.toDataURL("image/jpeg",0.92));
+    };
+    img.src=dataUrl;
+  });
+
   const callClaudeAPIWithImages=async()=>{
     const filled=imgSlots.filter(Boolean);
     if(!filled.length) return;
     setError("");
     setStep("extracting");
-    setProgress(`جارٍ تحليل ${filled.length} صورة — يشمل النصوص والرسومات والصور التوضيحية...`);
+    setProgress(`جارٍ تحليل ${filled.length} صورة — استخراج النصوص والصور التوضيحية...`);
     try{
-      // Build content blocks: one image block per slot + one text instruction
-      const imgBlocks=filled.map(s=>({
-        type:"image",
-        source:{type:"base64",media_type:s.mime,data:s.base64}
-      }));
+      // Step 1: ask Claude to extract questions AND crop coords for any illustration
+      const imgBlocks=filled.map((s,i)=>([
+        {type:"image",source:{type:"base64",media_type:s.mime,data:s.base64}},
+        {type:"text",text:`[الصورة ${i+1}]`}
+      ])).flat();
 
-      const textBlock={
-        type:"text",
-        text:`أنت مساعد تعليمي خبير. لديك ${filled.length} صورة من ملف PDF تعليمي.
+      const textBlock={type:"text",text:`أنت مساعد تعليمي خبير في تحليل صفحات PDF التعليمية.
+لديك ${filled.length} صورة من ملف PDF. كل صورة مُعرَّفة بـ [الصورة N].
 
-مهمتك:
-1. افحص كل صورة بعناية — اقرأ كل النصوص، افهم الرسوم البيانية، الجداول، الصور التوضيحية، المخططات.
-2. إذا كان في الصورة رسم أو صورة توضيحية لسؤال — صِف ما تراه في نص السؤال ليفهمه الطالب بدون الصورة.
-3. استخرج جميع الأسئلة والمعايير الدراسية من كل الصور مجتمعة.
+مهمتك المزدوجة:
+١. استخرج كل الأسئلة والمعايير من جميع الصور.
+٢. لكل سؤال يحتوي على صورة توضيحية أو رسم بياني بجانبه — حدّد إحداثيات الصورة التوضيحية كنسب مئوية (0 إلى 1) من أبعاد الصورة الأصلية.
 
 أرجع JSON فقط بهذا الشكل بالضبط بدون أي نص قبله أو بعده:
 {
-  "title": "عنوان الاختبار أو المادة المستخرجة من الصور",
+  "title": "عنوان الاختبار أو المادة",
   "standards": [
     {
-      "name": "اسم المعيار أو الموضوع",
+      "name": "اسم المعيار",
       "questions": [
         {
-          "text": "نص السؤال كاملاً — إذا كان فيه رسم صِف الرسم داخل النص مثل: (الشكل يوضح...)",
+          "text": "نص السؤال كاملاً",
           "options": ["الخيار أ","الخيار ب","الخيار ج","الخيار د"],
           "correct": 0,
           "grade": 2,
-          "feedback": "تلميح أو شرح مختصر إذا توفر"
+          "feedback": "تلميح اختياري",
+          "imageCrop": {
+            "slotIndex": 0,
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.25,
+            "h": 0.18
+          }
         }
       ]
     }
   ]
 }
 
-قواعد مهمة:
-- correct: رقم 0-3 يمثل الإجابة الصحيحة (0=أ، 1=ب، 2=ج، 3=د)
-- إذا لم تتضح الإجابة من الصورة اجعل correct: 0
-- اجمع أسئلة نفس الموضوع تحت معيار واحد
-- لا تتجاهل أي سؤال حتى لو كان غير مكتمل`
-      };
+قواعد imageCrop:
+- slotIndex: رقم الصورة (0 للأولى، 1 للثانية، 2 للثالثة)
+- x,y: إحداثيات الزاوية العلوية اليسرى للصورة التوضيحية (نسبة من عرض/ارتفاع الصورة الكلية)
+- w,h: عرض وارتفاع الصورة التوضيحية (نسبة)
+- إذا لم يكن في السؤال صورة توضيحية اجعل imageCrop: null
+- كن دقيقاً في الإحداثيات — الصور التوضيحية عادةً تكون على يمين أو يسار نص السؤال
+- correct: رقم 0-3 (0=أ)
+- اجمع الأسئلة المتشابهة تحت معيار واحد`};
 
       const res=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
         headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({
-          model:"claude-opus-4-5",
-          max_tokens:4000,
-          messages:[{role:"user",content:[...imgBlocks,textBlock]}]
-        })
+        body:JSON.stringify({model:"claude-opus-4-5",max_tokens:4000,messages:[{role:"user",content:[...imgBlocks,textBlock]}]})
       });
       const data=await res.json();
       if(data.error) throw new Error(data.error.message);
       const raw=(data.content||[]).map(b=>b.text||"").join("");
       const jsonStr=raw.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(jsonStr);
-      setExamTitle(parsed.title||"اختبار مستورد");
-      setStandards((parsed.standards||[]).map(s=>({
+
+      setProgress("جارٍ اقتصاص الصور التوضيحية...");
+
+      // Step 2: crop images for each question that has imageCrop
+      const processedStandards=await Promise.all((parsed.standards||[]).map(async s=>({
         ...s,id:uid(),
-        questions:(s.questions||[]).map(q=>({
-          ...q,id:uid(),grade:Number(q.grade)||2,correct:Number(q.correct)||0,feedback:q.feedback||""
+        questions:await Promise.all((s.questions||[]).map(async q=>{
+          let croppedImage=null;
+          if(q.imageCrop && filled[q.imageCrop.slotIndex]){
+            try{
+              const slotPreview=filled[q.imageCrop.slotIndex].preview;
+              croppedImage=await cropImage(slotPreview,{
+                x:q.imageCrop.x,
+                y:q.imageCrop.y,
+                w:q.imageCrop.w,
+                h:q.imageCrop.h
+              });
+            }catch(e){ croppedImage=null; }
+          }
+          return {...q,id:uid(),grade:Number(q.grade)||2,correct:Number(q.correct)||0,feedback:q.feedback||"",image:croppedImage};
         }))
       })));
+
+      setExamTitle(parsed.title||"اختبار مستورد");
+      setStandards(processedStandards);
       setStep("review");
     }catch(e){
       setError("حدث خطأ: "+e.message);
