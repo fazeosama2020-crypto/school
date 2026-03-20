@@ -1556,64 +1556,85 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
   const [error,setError]=useState("");
   const [progress,setProgress]=useState("");
   const [pastedText,setPastedText]=useState("");
-  const [imgPreview,setImgPreview]=useState(null);
-  const [imgBase64,setImgBase64]=useState(null);
-  const [imgMime,setImgMime]=useState(null);
+  const [imgSlots,setImgSlots]=useState([null,null,null]);
   const fileRef=useRef(null);
   const imgInputRef=useRef(null);
 
-  const handleDroppedImage=(file)=>{
+  const handleDroppedImageSlot=(idx,file)=>{
     const reader=new FileReader();
     reader.onload=e=>{
-      setImgPreview(e.target.result);
-      setImgBase64(e.target.result.split(",")[1]);
-      setImgMime(file.type);
+      const result=e.target.result;
+      setImgSlots(prev=>{
+        const next=[...prev];
+        next[idx]={preview:result,base64:result.split(",")[1],mime:file.type,name:file.name};
+        return next;
+      });
     };
     reader.readAsDataURL(file);
   };
 
-  const callClaudeAPIWithImage=async()=>{
-    if(!imgBase64) return;
+  const clearSlot=(idx)=>{
+    setImgSlots(prev=>{const next=[...prev];next[idx]=null;return next;});
+  };
+
+  // keep old single handler for backward compat
+  const handleDroppedImage=(file)=>handleDroppedImageSlot(0,file);
+
+  const callClaudeAPIWithImages=async()=>{
+    const filled=imgSlots.filter(Boolean);
+    if(!filled.length) return;
     setError("");
     setStep("extracting");
-    setProgress("جارٍ تحليل الصورة...");
+    setProgress(`جارٍ تحليل ${filled.length} صورة — يشمل النصوص والرسومات والصور التوضيحية...`);
     try{
+      // Build content blocks: one image block per slot + one text instruction
+      const imgBlocks=filled.map(s=>({
+        type:"image",
+        source:{type:"base64",media_type:s.mime,data:s.base64}
+      }));
+
+      const textBlock={
+        type:"text",
+        text:`أنت مساعد تعليمي خبير. لديك ${filled.length} صورة من ملف PDF تعليمي.
+
+مهمتك:
+1. افحص كل صورة بعناية — اقرأ كل النصوص، افهم الرسوم البيانية، الجداول، الصور التوضيحية، المخططات.
+2. إذا كان في الصورة رسم أو صورة توضيحية لسؤال — صِف ما تراه في نص السؤال ليفهمه الطالب بدون الصورة.
+3. استخرج جميع الأسئلة والمعايير الدراسية من كل الصور مجتمعة.
+
+أرجع JSON فقط بهذا الشكل بالضبط بدون أي نص قبله أو بعده:
+{
+  "title": "عنوان الاختبار أو المادة المستخرجة من الصور",
+  "standards": [
+    {
+      "name": "اسم المعيار أو الموضوع",
+      "questions": [
+        {
+          "text": "نص السؤال كاملاً — إذا كان فيه رسم صِف الرسم داخل النص مثل: (الشكل يوضح...)",
+          "options": ["الخيار أ","الخيار ب","الخيار ج","الخيار د"],
+          "correct": 0,
+          "grade": 2,
+          "feedback": "تلميح أو شرح مختصر إذا توفر"
+        }
+      ]
+    }
+  ]
+}
+
+قواعد مهمة:
+- correct: رقم 0-3 يمثل الإجابة الصحيحة (0=أ، 1=ب، 2=ج، 3=د)
+- إذا لم تتضح الإجابة من الصورة اجعل correct: 0
+- اجمع أسئلة نفس الموضوع تحت معيار واحد
+- لا تتجاهل أي سؤال حتى لو كان غير مكتمل`
+      };
+
       const res=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
         headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
           model:"claude-opus-4-5",
           max_tokens:4000,
-          messages:[{
-            role:"user",
-            content:[
-              {type:"image",source:{type:"base64",media_type:imgMime,data:imgBase64}},
-              {type:"text",text:`استخرج من هذه الصورة كل الأسئلة والمعايير الدراسية ونظّمها بصيغة JSON بالشكل التالي بالضبط:
-{
-  "title": "عنوان الاختبار أو المادة",
-  "standards": [
-    {
-      "name": "اسم المعيار أو الموضوع",
-      "questions": [
-        {
-          "text": "نص السؤال",
-          "options": ["الخيار أ","الخيار ب","الخيار ج","الخيار د"],
-          "correct": 0,
-          "grade": 2,
-          "feedback": ""
-        }
-      ]
-    }
-  ]
-}
-القواعد:
-- correct هو رقم من 0 إلى 3 يمثل الإجابة الصحيحة
-- إذا لم تتضح الإجابة ضع 0
-- إذا لم يوجد خيارات اخترع 4 خيارات منطقية
-- اجمع الأسئلة المتشابهة تحت نفس المعيار
-- أرجع JSON فقط بدون أي نص إضافي`}
-            ]
-          }]
+          messages:[{role:"user",content:[...imgBlocks,textBlock]}]
         })
       });
       const data=await res.json();
@@ -1622,13 +1643,21 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
       const jsonStr=raw.replace(/```json|```/g,"").trim();
       const parsed=JSON.parse(jsonStr);
       setExamTitle(parsed.title||"اختبار مستورد");
-      setStandards((parsed.standards||[]).map(s=>({...s,id:uid(),questions:(s.questions||[]).map(q=>({...q,id:uid(),grade:Number(q.grade)||2,correct:Number(q.correct)||0,feedback:q.feedback||""}))})));
+      setStandards((parsed.standards||[]).map(s=>({
+        ...s,id:uid(),
+        questions:(s.questions||[]).map(q=>({
+          ...q,id:uid(),grade:Number(q.grade)||2,correct:Number(q.correct)||0,feedback:q.feedback||""
+        }))
+      })));
       setStep("review");
     }catch(e){
       setError("حدث خطأ: "+e.message);
       setStep("upload");
     }
   };
+
+  // keep old single-image function alias
+  const callClaudeAPIWithImage=callClaudeAPIWithImages;
 
   const callClaudeAPI=async(text)=>{
     if(!apiKey){setError("أدخل مفتاح Claude AI أولاً في الإعدادات");return;}
@@ -1783,62 +1812,106 @@ ${text.slice(0,6000)}
               🤖 تحليل بالذكاء الاصطناعي
             </button>
           </div>
-          {/* Method 3: Image drop */}
+          {/* Method 3: 3 Image drop zones */}
           <div className="card" style={{marginBottom:14,border:"2px solid #7c3aed",background:"#faf5ff",padding:"16px 18px"}}>
-            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:4}}>🖼️ الطريقة ٣: إفلات صورة مقصوصة من PDF</p>
-            <p style={{fontSize:12,color:"#94a3b8",marginBottom:12}}>اقص أي جزء من ملف PDF وأفلته هنا — سيتم تحليله بالذكاء الاصطناعي</p>
-            <div
-              onDragOver={e=>{e.preventDefault();e.currentTarget.style.background="#ede9fe";e.currentTarget.style.borderColor="#6d28d9";}}
-              onDragLeave={e=>{e.currentTarget.style.background=imgPreview?"#f5f3ff":"#faf5ff";e.currentTarget.style.borderColor="#c4b5fd";}}
-              onDrop={e=>{
-                e.preventDefault();
-                e.currentTarget.style.background=imgPreview?"#f5f3ff":"#faf5ff";
-                e.currentTarget.style.borderColor="#c4b5fd";
-                const file=e.dataTransfer.files[0];
-                if(file&&file.type.startsWith("image/")) handleDroppedImage(file);
-              }}
-              onClick={()=>imgInputRef.current?.click()}
-              style={{
-                border:"2.5px dashed #c4b5fd",
-                borderRadius:12,
-                background:imgPreview?"#f5f3ff":"#fdf8ff",
-                minHeight:imgPreview?0:120,
-                display:"flex",
-                flexDirection:"column",
-                alignItems:"center",
-                justifyContent:"center",
-                gap:8,
-                cursor:"pointer",
-                transition:"all .2s",
-                padding:imgPreview?8:16,
-                position:"relative",
-                overflow:"hidden"
-              }}>
-              <input ref={imgInputRef} type="file" accept="image/*" style={{display:"none"}}
-                onChange={e=>{if(e.target.files[0])handleDroppedImage(e.target.files[0]);}}/>
-              {imgPreview ? (
-                <div style={{position:"relative",width:"100%"}}>
-                  <img src={imgPreview} style={{width:"100%",maxHeight:260,objectFit:"contain",borderRadius:8,display:"block"}} alt="preview"/>
-                  <div style={{position:"absolute",inset:0,background:"rgba(109,40,217,.0)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",opacity:0,transition:"opacity .2s"}}
-                    onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=0}
-                    style={{position:"absolute",inset:0,background:"rgba(109,40,217,.55)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    <p style={{color:"white",fontWeight:800,fontSize:14}}>🔄 انقر لاستبدال</p>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:2}}>🖼️ الطريقة ٣: إفلات صور مقصوصة من PDF (حتى ٣ صور)</p>
+            <p style={{fontSize:12,color:"#94a3b8",marginBottom:14}}>اقص صفحات أو أجزاء من PDF وأفلتها — الذكاء الاصطناعي يفهم النصوص والرسومات والصور التوضيحية</p>
+
+            {/* 3 drop slots */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:12}}>
+              {[0,1,2].map(idx=>{
+                const slot=imgSlots[idx];
+                const inputId=`imgSlot${idx}`;
+                return (
+                  <div key={idx}>
+                    <p style={{fontSize:11,fontWeight:700,color:"#6b21a8",marginBottom:5,textAlign:"center"}}>
+                      {["الصورة الأولى","الصورة الثانية","الصورة الثالثة"][idx]}
+                      {slot&&<span style={{color:"#16a34a",marginRight:4}}>✓</span>}
+                    </p>
+                    <div
+                      onDragOver={e=>{e.preventDefault();e.currentTarget.style.background="#ede9fe";e.currentTarget.style.borderColor="#6d28d9";}}
+                      onDragLeave={e=>{e.currentTarget.style.background=slot?"#f0ebff":"#fdf8ff";e.currentTarget.style.borderColor=slot?"#7c3aed":"#c4b5fd";}}
+                      onDrop={e=>{
+                        e.preventDefault();
+                        e.currentTarget.style.background=slot?"#f0ebff":"#fdf8ff";
+                        e.currentTarget.style.borderColor=slot?"#7c3aed":"#c4b5fd";
+                        const file=e.dataTransfer.files[0];
+                        if(file&&file.type.startsWith("image/")) handleDroppedImageSlot(idx,file);
+                      }}
+                      onClick={()=>document.getElementById(inputId)?.click()}
+                      style={{
+                        border:`2px dashed ${slot?"#7c3aed":"#c4b5fd"}`,
+                        borderRadius:10,
+                        background:slot?"#f0ebff":"#fdf8ff",
+                        minHeight:slot?0:100,
+                        display:"flex",
+                        flexDirection:"column",
+                        alignItems:"center",
+                        justifyContent:"center",
+                        gap:6,
+                        cursor:"pointer",
+                        transition:"all .2s",
+                        padding:slot?6:12,
+                        position:"relative",
+                        overflow:"hidden"
+                      }}>
+                      <input id={inputId} type="file" accept="image/*" style={{display:"none"}}
+                        onChange={e=>{if(e.target.files[0])handleDroppedImageSlot(idx,e.target.files[0]);}}/>
+                      {slot ? (
+                        <div style={{position:"relative",width:"100%"}}>
+                          <img src={slot.preview} style={{width:"100%",maxHeight:140,objectFit:"contain",borderRadius:7,display:"block"}} alt={`slot${idx}`}/>
+                          <div
+                            onMouseEnter={e=>e.currentTarget.style.opacity=1}
+                            onMouseLeave={e=>e.currentTarget.style.opacity=0}
+                            style={{position:"absolute",inset:0,background:"rgba(109,40,217,.6)",borderRadius:7,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,opacity:0,transition:"opacity .2s"}}>
+                            <p style={{color:"white",fontWeight:800,fontSize:12}}>🔄 استبدال</p>
+                            <button
+                              onClick={e=>{e.stopPropagation();clearSlot(idx);}}
+                              style={{background:"#ef4444",color:"white",border:"none",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"Tajawal"}}>
+                              ✕ حذف
+                            </button>
+                          </div>
+                        </div>
+                      ):(
+                        <>
+                          <span style={{fontSize:30,animation:`float ${2.5+idx*0.3}s ease-in-out infinite`}}>🖼️</span>
+                          <p style={{fontSize:11,fontWeight:700,color:"#7c3aed",textAlign:"center"}}>أفلت أو انقر</p>
+                          <p style={{fontSize:10,color:"#94a3b8",textAlign:"center"}}>PNG • JPG • WEBP</p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <>
-                  <span style={{fontSize:42,animation:"float 3s ease-in-out infinite"}}>🖼️</span>
-                  <p style={{fontWeight:800,color:"#7c3aed",fontSize:14}}>أفلت الصورة هنا أو انقر للاختيار</p>
-                  <p style={{fontSize:12,color:"#94a3b8"}}>PNG • JPG • WEBP • صورة مقصوصة</p>
-                </>
-              )}
+                );
+              })}
             </div>
-            {imgPreview&&(
-              <button className="btn btn-blue" style={{width:"100%",marginTop:12,padding:"11px",fontSize:15,fontWeight:800,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",border:"none"}}
-                onClick={()=>callClaudeAPIWithImage()}>
-                🤖 تحليل الصورة بالذكاء الاصطناعي
-              </button>
+
+            {/* count badge */}
+            {imgSlots.some(Boolean)&&(
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",background:"#f0ebff",borderRadius:8,border:"1px solid #e9d5ff"}}>
+                <span style={{fontSize:13}}>🖼️</span>
+                <p style={{fontSize:13,color:"#6b21a8",fontWeight:700,flex:1}}>
+                  {imgSlots.filter(Boolean).length} صورة جاهزة للتحليل
+                  {imgSlots.filter(Boolean).length<3&&<span style={{color:"#94a3b8",fontWeight:400}}> — يمكنك إضافة {3-imgSlots.filter(Boolean).length} أكثر</span>}
+                </p>
+                <span style={{fontSize:11,color:"#7c3aed",fontWeight:700,background:"white",padding:"2px 8px",borderRadius:5,border:"1px solid #c4b5fd"}}>
+                  الذكاء يحلل النصوص والرسوم 🔍
+                </span>
+              </div>
             )}
+
+            <button
+              className="btn"
+              style={{
+                width:"100%",padding:"12px",fontSize:15,fontWeight:800,
+                background:imgSlots.some(Boolean)?"linear-gradient(135deg,#7c3aed,#6d28d9)":"#e2e8f0",
+                color:imgSlots.some(Boolean)?"white":"#94a3b8",
+                border:"none",borderRadius:10,cursor:imgSlots.some(Boolean)?"pointer":"not-allowed",
+                transition:"all .2s"
+              }}
+              disabled={!imgSlots.some(Boolean)}
+              onClick={()=>callClaudeAPIWithImages()}>
+              🤖 تحليل {imgSlots.filter(Boolean).length>0?`${imgSlots.filter(Boolean).length} صور`:"الصور"} بالذكاء الاصطناعي
+            </button>
           </div>
 
           {error&&<div className="card" style={{background:"#fef2f2",border:"2px solid #fca5a5",padding:"12px 16px",marginBottom:10}}><p style={{color:"#dc2626",fontWeight:700}}>{error}</p></div>}
