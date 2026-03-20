@@ -1547,83 +1547,50 @@ function AllResultsScreen({results,exams,onClearResults,onBack}){
 }
 /* ─── AI IMPORT SCREEN ─── */
 function AIImportScreen({apiKey,onSaveExam,onBack}){
-  const [step,setStep]=useState("upload"); // upload | extracting | review | saving
+  const [step,setStep]=useState("upload");
   const [examTitle,setExamTitle]=useState("");
   const [timerMins,setTimerMins]=useState(0);
   const [isPractice,setIsPractice]=useState(false);
-  const [standards,setStandards]=useState([]); // [{id,name,questions:[{id,text,options,correct,feedback,grade}]}]
+  const [standards,setStandards]=useState([]);
   const [error,setError]=useState("");
   const [progress,setProgress]=useState("");
+  const [pastedText,setPastedText]=useState("");
   const fileRef=useRef(null);
 
-  const extractFromPDF=async(file)=>{
+  const callClaudeAPI=async(text)=>{
     if(!apiKey){setError("أدخل مفتاح Claude AI أولاً في الإعدادات");return;}
     setStep("extracting"); setError("");
-    setProgress("جارٍ قراءة الملف...");
+    setProgress("جارٍ تحليل المعايير والأسئلة بالذكاء الاصطناعي...");
     try{
-      const base64=await new Promise((res,rej)=>{
-        const r=new FileReader();
-        r.onload=e=>res(e.target.result.split(",")[1]);
-        r.onerror=rej;
-        r.readAsDataURL(file);
-      });
-      setProgress("جارٍ تحليل المعايير والأسئلة بالذكاء الاصطناعي...");
       const resp=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
         headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({
-          model:"claude-opus-4-5",
+          model:"claude-haiku-4-5-20251001",
           max_tokens:4000,
-          messages:[{role:"user",content:[
-            {type:"document",source:{type:"base64",media_type:"application/pdf",data:base64}},
-            {type:"text",text:`أنت مساعد تعليمي. استخرج من هذا PDF المعايير والأسئلة بتنسيق JSON دقيق.
+          messages:[{role:"user",content:`أنت مساعد تعليمي. استخرج من هذا النص المعايير والأسئلة بتنسيق JSON دقيق.
+
+النص:
+${text.slice(0,6000)}
 
 الناتج يجب أن يكون JSON فقط بهذا الشكل بدون أي نص آخر:
-{
-  "title": "عنوان الاختبار أو المادة",
-  "standards": [
-    {
-      "name": "نص المعيار",
-      "questions": [
-        {
-          "text": "نص السؤال",
-          "options": ["الخيار الأول","الخيار الثاني","الخيار الثالث","الخيار الرابع"],
-          "correct": 0,
-          "grade": 2,
-          "feedback": ""
-        }
-      ]
-    }
-  ]
-}
+{"title":"عنوان الاختبار","standards":[{"name":"نص المعيار","questions":[{"text":"نص السؤال","options":["الخيار الأول","الخيار الثاني","الخيار الثالث","الخيار الرابع"],"correct":0,"grade":2,"feedback":""}]}]}
 
-قواعد مهمة:
-- correct هو رقم (0=أ، 1=ب، 2=ج، 3=د)
-- إذا لم تجد الإجابة الصحيحة في الملف، ضع 0
-- أضف 4 خيارات لكل سؤال، وإذا كانت أقل أكمل بخيارات منطقية
-- grade افتراضي 2 لكل سؤال
-- feedback اتركه فارغاً
-- استخرج كل المعايير والأسئلة الموجودة في الملف`}
-          ]}]}
-        )
+قواعد: correct رقم (0=أ،1=ب،2=ج،3=د). إذا لم تجد الإجابة ضع 0. أضف 4 خيارات لكل سؤال.`}]})
       });
-      if(!resp.ok) throw new Error(`خطأ ${resp.status}`);
+      if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(`خطأ ${resp.status}: ${e.error?.message||""}`);}
       const data=await resp.json();
-      const text=data.content[0].text.trim();
-      const json=JSON.parse(text.replace(/```json|```/g,"").trim());
+      const txt=data.content[0].text.trim();
+      const json=JSON.parse(txt.replace(/```json|```/g,"").trim());
       const parsed={
         title:json.title||"اختبار مستورد",
         standards:(json.standards||[]).map(s=>({
-          id:uid(),
-          name:s.name||"معيار",
+          id:uid(),name:s.name||"معيار",
           questions:(s.questions||[]).map(q=>({
-            id:uid(),
-            text:q.text||"",
+            id:uid(),text:q.text||"",
             options:(q.options||["","","",""]).map(String),
-            correct:Number(q.correct)||0,
-            grade:Number(q.grade)||2,
-            feedback:q.feedback||"",
-            image:null
+            correct:Number(q.correct)||0,grade:Number(q.grade)||2,
+            feedback:q.feedback||"",image:null
           }))
         }))
       };
@@ -1633,6 +1600,31 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
     }catch(e){
       setError("حدث خطأ: "+e.message);
       setStep("upload");
+    }
+  };
+
+  const extractFromPDF=async(file)=>{
+    setProgress("جارٍ قراءة الملف...");
+    try{
+      const text=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=e=>{
+          const binary=e.target.result;
+          const matches=binary.match(/[\u0600-\u06FF\u0750-\u077F\s\w\(\)\.،,؟?!:0-9]+/g)||[];
+          res(matches.filter(m=>m.trim().length>5).join(" "));
+        };
+        r.onerror=rej;
+        r.readAsBinaryString(file);
+      });
+      if(text.trim().length>50){
+        setPastedText(text.slice(0,6000));
+      } else {
+        setError("تعذّر استخراج النص تلقائياً — الرجاء لصق النص يدوياً في الحقل أدناه");
+      }
+      setProgress("");
+    }catch(e){
+      setError("تعذّر قراءة الملف");
+      setProgress("");
     }
   };
 
@@ -1699,18 +1691,30 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
       {/* Step: Upload */}
       {step==="upload"&&(
         <div>
-          <input ref={fileRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>e.target.files[0]&&extractFromPDF(e.target.files[0])}/>
-          <div className="card" style={{marginBottom:14,textAlign:"center",padding:40,border:"3px dashed #c4b5fd",background:"#faf5ff",cursor:"pointer"}} onClick={()=>fileRef.current?.click()}>
-            <p style={{fontSize:52,marginBottom:12}}>📄</p>
-            <p style={{fontSize:17,fontWeight:800,color:"#7c3aed",marginBottom:6}}>ارفع ملف PDF المعايير</p>
-            <p style={{fontSize:13,color:"#94a3b8",marginBottom:16}}>سيقوم الذكاء الاصطناعي باستخراج المعايير والأسئلة تلقائياً</p>
-            <button className="btn" style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"white",border:"none",borderRadius:10,padding:"11px 28px",fontSize:15,fontWeight:800}}>اختر الملف 📂</button>
+          <input ref={fileRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])extractFromPDF(e.target.files[0]);}}/>
+          {/* PDF upload */}
+          <div className="card" style={{marginBottom:14,border:"2px dashed #c4b5fd",background:"#faf5ff",padding:"16px 18px"}}>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:10}}>📄 الطريقة ١: رفع PDF (استخراج تلقائي)</p>
+            <button className="btn" style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"white",border:"none",borderRadius:10,padding:"10px 24px",fontSize:14,fontWeight:800,width:"100%"}} onClick={()=>fileRef.current?.click()}>اختر ملف PDF 📂</button>
+            {progress&&<p style={{fontSize:12,color:"#7c3aed",marginTop:8,textAlign:"center"}}>{progress}</p>}
           </div>
-          {error&&<div className="card" style={{background:"#fef2f2",border:"2px solid #fca5a5",padding:"12px 16px"}}><p style={{color:"#dc2626",fontWeight:700}}>{error}</p></div>}
+          {/* Text paste */}
+          <div className="card" style={{marginBottom:14,border:"2px solid #e9d5ff",background:"#faf5ff",padding:"16px 18px"}}>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:8}}>📝 الطريقة ٢: لصق النص مباشرة (الأكثر دقة)</p>
+            <p style={{fontSize:12,color:"#94a3b8",marginBottom:8}}>افتح ملف PDF وانسخ كل النص ثم الصقه هنا</p>
+            <textarea className="inp" value={pastedText} onChange={e=>setPastedText(e.target.value)}
+              style={{minHeight:140,fontSize:13,marginBottom:10,direction:"rtl"}}
+              placeholder="الصق نص الأسئلة والمعايير هنا..."/>
+            <button className="btn btn-blue" style={{width:"100%",padding:"11px",fontSize:15,fontWeight:800}}
+              onClick={()=>callClaudeAPI(pastedText)} disabled={!pastedText.trim()}>
+              🤖 تحليل بالذكاء الاصطناعي
+            </button>
+          </div>
+          {error&&<div className="card" style={{background:"#fef2f2",border:"2px solid #fca5a5",padding:"12px 16px",marginBottom:10}}><p style={{color:"#dc2626",fontWeight:700}}>{error}</p></div>}
           <div className="card" style={{padding:"14px 18px",background:"#f5f3ff",border:"2px solid #e9d5ff"}}>
             <p style={{fontWeight:800,color:"#7c3aed",marginBottom:8,fontSize:14}}>📋 ماذا يفعل الاستيراد الذكي؟</p>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {["📌 يقرأ المعايير الدراسية من الملف","❓ يستخرج الأسئلة مع 4 خيارات لكل سؤال","✅ يحدد الإجابات الصحيحة إذا كانت موجودة","✏️ يتيح لك التعديل قبل الحفظ","💾 يحفظ كاختبار جاهز مع تحليل النتائج"].map((t,i)=>(
+              {["📌 يقرأ المعايير الدراسية من النص","❓ يستخرج الأسئلة مع 4 خيارات لكل سؤال","✅ يحدد الإجابات الصحيحة إذا كانت موجودة","✏️ يتيح لك التعديل قبل الحفظ","💾 يحفظ كاختبار جاهز مع تحليل النتائج"].map((t,i)=>(
                 <p key={i} style={{fontSize:13,color:"#6b21a8",fontWeight:600}}>{t}</p>
               ))}
             </div>
