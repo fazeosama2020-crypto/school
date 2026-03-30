@@ -56,6 +56,7 @@ html,body{font-family:'Tajawal',sans-serif;direction:rtl;background:#f0f4f8;min-
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes badgePop{0%{transform:scale(0) rotate(-10deg)}70%{transform:scale(1.2) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 .badge-pop{animation:badgePop .5s ease forwards}
 .fade-in{animation:fadeIn .4s ease forwards}
 .timer-warning{animation:pulse .8s ease infinite}
@@ -534,7 +535,7 @@ function App(){
         {screen==="ai_import" && isAdmin && (
           <AIImportScreen
             apiKey={apiKey}
-            onSaveExam={(exam)=>saveExam(exam)}
+            onSaveExam={(exam)=>{ saveExam(exam); setScreen("admin"); }}
             onBack={()=>setScreen("admin")}
           />
         )}
@@ -655,13 +656,19 @@ function QuizScreen({exam,answers,setAnswers,subjectIdx,setSubjectIdx,onSubmit,o
         {currentSub.questions.map((q,qi)=>(
           <div key={q.id} className="card">
             <div style={{display:"flex",gap:11,marginBottom:10}}>
-              <div style={{minWidth:30,height:30,borderRadius:8,background:answers[q.id]!==undefined?(practiceResult[q.id]===true?"#166534":practiceResult[q.id]===false?"#dc2626":"#166534"):"#1d4ed8",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800}}>{qi+1}</div>
-              <div style={{flex:1}}>
-                {q.text&&<p style={{fontSize:15,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
-                <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+              <div style={{minWidth:30,height:30,borderRadius:8,background:answers[q.id]!==undefined?(practiceResult[q.id]===true?"#166534":practiceResult[q.id]===false?"#dc2626":"#166534"):"#1d4ed8",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,flexShrink:0}}>{qi+1}</div>
+              <div style={{flex:1,display:"flex",gap:12,alignItems:"flex-start"}}>
+                <div style={{flex:1}}>
+                  {q.text&&<p style={{fontSize:15,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
+                  <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+                </div>
+                {q.image&&(
+                  <div style={{flexShrink:0,width:160}}>
+                    <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:10,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
+                  </div>
+                )}
               </div>
             </div>
-            {q.image&&<img src={q.image} alt="" style={{width:"100%",maxHeight:240,objectFit:"contain",borderRadius:10,border:"1px solid #e2e8f0",marginBottom:12}}/>}
             <div style={{display:"flex",flexDirection:"column",gap:7}}>
               {q.options.map((opt,oi)=>{
                 if(!opt) return null;
@@ -761,14 +768,19 @@ function ResultsScreen({res,student,examTitle,exam,answers,onBack}){
                   <div key={q.id} className="card" style={{border:`2px solid ${notAnswered?"#e2e8f0":isCorrect?"#86efac":"#fca5a5"}`,padding:"14px 16px"}}>
                     <div style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
                       <div style={{minWidth:28,height:28,borderRadius:8,background:notAnswered?"#94a3b8":isCorrect?"#166534":"#dc2626",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,flexShrink:0}}>{qi+1}</div>
-                      <div style={{flex:1}}>
-                        {q.text&&<p style={{fontSize:14,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
-                        <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+                      <div style={{flex:1,display:"flex",gap:10,alignItems:"flex-start"}}>
+                        <div style={{flex:1}}>
+                          {q.text&&<p style={{fontSize:14,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
+                          <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
+                        </div>
+                        {q.image&&(
+                          <div style={{flexShrink:0,width:140}}>
+                            <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:8,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
+                          </div>
+                        )}
                       </div>
                       <span style={{fontSize:18,flexShrink:0}}>{notAnswered?"⬜":isCorrect?"✅":"❌"}</span>
                     </div>
-
-                    {q.image&&<img src={q.image} alt="" style={{width:"100%",maxHeight:180,objectFit:"contain",borderRadius:8,border:"1px solid #e2e8f0",marginBottom:10}}/>}
 
                     <div style={{display:"flex",flexDirection:"column",gap:6}}>
                       {q.options.map((opt,oi)=>{
@@ -885,7 +897,7 @@ function ResultsScreen({res,student,examTitle,exam,answers,onBack}){
 function AdminPanel({exams,allResults,onNewExam,showNewExam,newTitle,setNewTitle,newTimer,setNewTimer,newPractice,setNewPractice,newPublishAt,setNewPublishAt,onCreateExam,onCancelNew,onEditExam,onDeleteExam,onViewResults,onAIImport,adminPass,apiKey,onChangePass,onChangeApiKey}){
   const [showSettings,setShowSettings]=useState(false);
   const [newPass,setNewPass]=useState("");
-  const [newKey,setNewKey]=useState("");
+  const [newKey,setNewKey]=useState(null); // null = not yet touched
   return (
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
@@ -915,8 +927,8 @@ function AdminPanel({exams,allResults,onNewExam,showNewExam,newTitle,setNewTitle
           <div>
             <label style={{fontSize:12,fontWeight:700,color:"#92400e",display:"block",marginBottom:5}}>🤖 مفتاح Claude AI (للاستيراد الذكي)</label>
             <div style={{display:"flex",gap:8}}>
-              <input className="inp" type="password" placeholder="sk-ant-api03-..." value={newKey||apiKey} onChange={e=>setNewKey(e.target.value)} style={{flex:1,fontSize:12}}/>
-              <button className="btn btn-blue" style={{padding:"10px 18px",whiteSpace:"nowrap"}} onClick={()=>{if((newKey||apiKey).trim()){onChangeApiKey((newKey||apiKey).trim());alert("تم حفظ مفتاح AI")}}}>حفظ</button>
+              <input className="inp" type="text" placeholder="sk-ant-api03-..." value={newKey!==null?newKey:apiKey} onChange={e=>setNewKey(e.target.value)} style={{flex:1,fontSize:12,direction:"ltr",textAlign:"left"}}/>
+              <button className="btn btn-blue" style={{padding:"10px 18px",whiteSpace:"nowrap"}} onClick={()=>{const k=(newKey!==null?newKey:apiKey).trim();onChangeApiKey(k);setNewKey(null);alert(k?"✅ تم حفظ مفتاح AI":"تم مسح المفتاح");}}>حفظ</button>
             </div>
             <p style={{fontSize:11,color:"#78350f",marginTop:5}}>احصل على المفتاح من: console.anthropic.com &nbsp;•&nbsp; {apiKey?"✅ محفوظ":"❌ غير محفوظ"}</p>
           </div>
@@ -1545,85 +1557,309 @@ function AllResultsScreen({results,exams,onClearResults,onBack}){
     </div>
   );
 }
+
+/* ─── PASTE IMAGE BOX (per-question) ─── */
+function PasteImageBox({image, onChange}){
+  const [active,setActive]=useState(false);
+  const boxRef=useRef(null);
+
+  // Handle paste from clipboard
+  useEffect(()=>{
+    const onPaste=(e)=>{
+      if(!active) return;
+      const items=e.clipboardData?.items||[];
+      for(const item of items){
+        if(item.type.startsWith("image/")){
+          const file=item.getAsFile();
+          if(file){
+            const reader=new FileReader();
+            reader.onload=ev=>onChange(ev.target.result);
+            reader.readAsDataURL(file);
+          }
+        }
+      }
+    };
+    document.addEventListener("paste",onPaste);
+    return ()=>document.removeEventListener("paste",onPaste);
+  },[active]);
+
+  // Handle drag & drop
+  const onDragOver=(e)=>{e.preventDefault();};
+  const onDrop=(e)=>{
+    e.preventDefault();
+    const file=e.dataTransfer.files[0];
+    if(file&&file.type.startsWith("image/")){
+      const reader=new FileReader();
+      reader.onload=ev=>onChange(ev.target.result);
+      reader.readAsDataURL(file);
+    }
+    // also handle dragged image elements (e.g. from browser)
+    const url=e.dataTransfer.getData("text/html");
+    if(!file && url){
+      const m=url.match(/src="([^"]+)"/);
+      if(m) onChange(m[1]);
+    }
+  };
+
+  return (
+    <div style={{marginTop:10}}>
+      {image?(
+        <div style={{position:"relative"}}>
+          <img src={image} alt="صورة السؤال" style={{width:"100%",maxHeight:200,objectFit:"contain",borderRadius:10,border:"2px solid #7c3aed",background:"#f5f3ff",display:"block"}}/>
+          <div style={{display:"flex",gap:6,marginTop:6}}>
+            <button
+              onClick={()=>{setActive(true);setTimeout(()=>boxRef.current?.focus(),50);}}
+              style={{flex:1,background:"#eff6ff",color:"#1d4ed8",border:"2px solid #bfdbfe",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Tajawal"}}>
+              🔄 استبدال (Ctrl+V)
+            </button>
+            <button
+              onClick={()=>onChange(null)}
+              style={{background:"#fef2f2",color:"#ef4444",border:"2px solid #fca5a5",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Tajawal"}}>
+              ✕
+            </button>
+          </div>
+        </div>
+      ):(
+        <div
+          ref={boxRef}
+          tabIndex={0}
+          onClick={()=>setActive(true)}
+          onBlur={()=>setActive(false)}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+          style={{
+            border:`2px dashed ${active?"#2563eb":"#e2e8f0"}`,
+            borderRadius:10,
+            background:active?"#eff6ff":"#fafafa",
+            padding:"14px 16px",
+            display:"flex",
+            alignItems:"center",
+            gap:12,
+            cursor:"pointer",
+            transition:"all .2s",
+            outline:"none",
+            boxShadow:active?"0 0 0 3px rgba(37,99,235,.15)":"none"
+          }}>
+          <div style={{
+            width:40,height:40,borderRadius:9,
+            background:active?"#2563eb":"#e2e8f0",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            fontSize:20,flexShrink:0,transition:"all .2s"
+          }}>📋</div>
+          <div>
+            <p style={{fontSize:13,fontWeight:700,color:active?"#1d4ed8":"#64748b",marginBottom:2}}>
+              {active?"✅ جاهز — الصق الصورة الآن (Ctrl+V)":"انقر ثم الصق صورة أو أفلتها هنا"}
+            </p>
+            <p style={{fontSize:11,color:"#94a3b8"}}>اقص صورة من PDF ← Ctrl+V ← تظهر هنا</p>
+          </div>
+          {active&&<div style={{marginRight:"auto",width:10,height:10,borderRadius:"50%",background:"#2563eb",animation:"pulse .8s infinite"}}/>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── AI IMPORT SCREEN ─── */
 function AIImportScreen({apiKey,onSaveExam,onBack}){
-  const [step,setStep]=useState("upload"); // upload | extracting | review | saving
+  const [step,setStep]=useState("upload");
   const [examTitle,setExamTitle]=useState("");
   const [timerMins,setTimerMins]=useState(0);
   const [isPractice,setIsPractice]=useState(false);
-  const [standards,setStandards]=useState([]); // [{id,name,questions:[{id,text,options,correct,feedback,grade}]}]
+  const [standards,setStandards]=useState([]);
   const [error,setError]=useState("");
   const [progress,setProgress]=useState("");
+  const [pastedText,setPastedText]=useState("");
+  const [imgSlots,setImgSlots]=useState([null,null,null]);
+  const [activeSlot,setActiveSlot]=useState(null);
   const fileRef=useRef(null);
+  const imgInputRef=useRef(null);
 
-  const extractFromPDF=async(file)=>{
-    if(!apiKey){setError("أدخل مفتاح Claude AI أولاً في الإعدادات");return;}
-    setStep("extracting"); setError("");
-    setProgress("جارٍ قراءة الملف...");
-    try{
-      const base64=await new Promise((res,rej)=>{
-        const r=new FileReader();
-        r.onload=e=>res(e.target.result.split(",")[1]);
-        r.onerror=rej;
-        r.readAsDataURL(file);
+  const handleDroppedImageSlot=(idx,file)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const result=e.target.result;
+      setImgSlots(prev=>{
+        const next=[...prev];
+        next[idx]={preview:result,base64:result.split(",")[1],mime:file.type,name:file.name};
+        return next;
       });
-      setProgress("جارٍ تحليل المعايير والأسئلة بالذكاء الاصطناعي...");
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
-        body:JSON.stringify({
-          model:"claude-opus-4-5",
-          max_tokens:4000,
-          messages:[{role:"user",content:[
-            {type:"document",source:{type:"base64",media_type:"application/pdf",data:base64}},
-            {type:"text",text:`أنت مساعد تعليمي. استخرج من هذا PDF المعايير والأسئلة بتنسيق JSON دقيق.
+    };
+    reader.readAsDataURL(file);
+  };
 
-الناتج يجب أن يكون JSON فقط بهذا الشكل بدون أي نص آخر:
+  const clearSlot=(idx)=>{
+    setImgSlots(prev=>{const next=[...prev];next[idx]=null;return next;});
+  };
+
+  // keep old single handler for backward compat
+  const handleDroppedImage=(file)=>handleDroppedImageSlot(0,file);
+
+  // Global paste listener for active slot
+  useEffect(()=>{
+    const onPaste=(e)=>{
+      if(activeSlot===null) return;
+      const items=e.clipboardData?.items||[];
+      for(const item of items){
+        if(item.type.startsWith("image/")){
+          const file=item.getAsFile();
+          if(file) handleDroppedImageSlot(activeSlot,file);
+          break;
+        }
+      }
+    };
+    document.addEventListener("paste",onPaste);
+    return ()=>document.removeEventListener("paste",onPaste);
+  },[activeSlot,imgSlots]);
+
+  // ── helper: crop a region from a dataURL using Canvas ──
+  const cropImage=(dataUrl,crop)=>new Promise(resolve=>{
+    const img=new window.Image();
+    img.onload=()=>{
+      const W=img.naturalWidth, H=img.naturalHeight;
+      const x=Math.round(crop.x*W), y=Math.round(crop.y*H);
+      const w=Math.round(crop.w*W), h=Math.round(crop.h*H);
+      const cv=document.createElement("canvas");
+      cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(img,x,y,w,h,0,0,w,h);
+      resolve(cv.toDataURL("image/jpeg",0.92));
+    };
+    img.src=dataUrl;
+  });
+
+  const callClaudeAPIWithImages=async()=>{
+    const filled=imgSlots.filter(Boolean);
+    if(!filled.length) return;
+    setError("");
+    setStep("extracting");
+    setProgress(`جارٍ تحليل ${filled.length} صورة — استخراج النصوص والصور التوضيحية...`);
+    try{
+      // Step 1: ask Claude to extract questions AND crop coords for any illustration
+      const imgBlocks=filled.map((s,i)=>([
+        {type:"image",source:{type:"base64",media_type:s.mime,data:s.base64}},
+        {type:"text",text:`[الصورة ${i+1}]`}
+      ])).flat();
+
+      const textBlock={type:"text",text:`أنت مساعد تعليمي خبير في تحليل صفحات PDF التعليمية.
+لديك ${filled.length} صورة من ملف PDF. كل صورة مُعرَّفة بـ [الصورة N].
+
+مهمتك المزدوجة:
+١. استخرج كل الأسئلة والمعايير من جميع الصور.
+٢. لكل سؤال يحتوي على صورة توضيحية أو رسم بياني بجانبه — حدّد إحداثيات الصورة التوضيحية كنسب مئوية (0 إلى 1) من أبعاد الصورة الأصلية.
+
+أرجع JSON فقط بهذا الشكل بالضبط بدون أي نص قبله أو بعده:
 {
   "title": "عنوان الاختبار أو المادة",
   "standards": [
     {
-      "name": "نص المعيار",
+      "name": "اسم المعيار",
       "questions": [
         {
-          "text": "نص السؤال",
-          "options": ["الخيار الأول","الخيار الثاني","الخيار الثالث","الخيار الرابع"],
+          "text": "نص السؤال كاملاً",
+          "options": ["الخيار أ","الخيار ب","الخيار ج","الخيار د"],
           "correct": 0,
           "grade": 2,
-          "feedback": ""
+          "feedback": "تلميح اختياري",
+          "imageCrop": {
+            "slotIndex": 0,
+            "x": 0.0,
+            "y": 0.0,
+            "w": 0.25,
+            "h": 0.18
+          }
         }
       ]
     }
   ]
 }
 
-قواعد مهمة:
-- correct هو رقم (0=أ، 1=ب، 2=ج، 3=د)
-- إذا لم تجد الإجابة الصحيحة في الملف، ضع 0
-- أضف 4 خيارات لكل سؤال، وإذا كانت أقل أكمل بخيارات منطقية
-- grade افتراضي 2 لكل سؤال
-- feedback اتركه فارغاً
-- استخرج كل المعايير والأسئلة الموجودة في الملف`}
-          ]}]}
-        )
+قواعد imageCrop:
+- slotIndex: رقم الصورة (0 للأولى، 1 للثانية، 2 للثالثة)
+- x,y: إحداثيات الزاوية العلوية اليسرى للصورة التوضيحية (نسبة من عرض/ارتفاع الصورة الكلية)
+- w,h: عرض وارتفاع الصورة التوضيحية (نسبة)
+- إذا لم يكن في السؤال صورة توضيحية اجعل imageCrop: null
+- كن دقيقاً في الإحداثيات — الصور التوضيحية عادةً تكون على يمين أو يسار نص السؤال
+- correct: رقم 0-3 (0=أ)
+- اجمع الأسئلة المتشابهة تحت معيار واحد`};
+
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-opus-4-5",max_tokens:4000,messages:[{role:"user",content:[...imgBlocks,textBlock]}]})
       });
-      if(!resp.ok) throw new Error(`خطأ ${resp.status}`);
+      const data=await res.json();
+      if(data.error) throw new Error(data.error.message);
+      const raw=(data.content||[]).map(b=>b.text||"").join("");
+      const jsonStr=raw.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(jsonStr);
+
+      setProgress("جارٍ اقتصاص الصور التوضيحية...");
+
+      // Step 2: crop images for each question that has imageCrop
+      const processedStandards=await Promise.all((parsed.standards||[]).map(async s=>({
+        ...s,id:uid(),
+        questions:await Promise.all((s.questions||[]).map(async q=>{
+          let croppedImage=null;
+          if(q.imageCrop && filled[q.imageCrop.slotIndex]){
+            try{
+              const slotPreview=filled[q.imageCrop.slotIndex].preview;
+              croppedImage=await cropImage(slotPreview,{
+                x:q.imageCrop.x,
+                y:q.imageCrop.y,
+                w:q.imageCrop.w,
+                h:q.imageCrop.h
+              });
+            }catch(e){ croppedImage=null; }
+          }
+          return {...q,id:uid(),grade:Number(q.grade)||2,correct:Number(q.correct)||0,feedback:q.feedback||"",image:croppedImage};
+        }))
+      })));
+
+      setExamTitle(parsed.title||"اختبار مستورد");
+      setStandards(processedStandards);
+      setStep("review");
+    }catch(e){
+      setError("حدث خطأ: "+e.message);
+      setStep("upload");
+    }
+  };
+
+  // keep old single-image function alias
+  const callClaudeAPIWithImage=callClaudeAPIWithImages;
+
+  const callClaudeAPI=async(text)=>{
+    if(!apiKey){setError("أدخل مفتاح Claude AI أولاً في الإعدادات");return;}
+    setStep("extracting"); setError("");
+    setProgress("جارٍ تحليل المعايير والأسئلة بالذكاء الاصطناعي...");
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({
+          model:"claude-haiku-4-5-20251001",
+          max_tokens:4000,
+          messages:[{role:"user",content:`أنت مساعد تعليمي. استخرج من هذا النص المعايير والأسئلة بتنسيق JSON دقيق.
+
+النص:
+${text.slice(0,6000)}
+
+الناتج يجب أن يكون JSON فقط بهذا الشكل بدون أي نص آخر:
+{"title":"عنوان الاختبار","standards":[{"name":"نص المعيار","questions":[{"text":"نص السؤال","options":["الخيار الأول","الخيار الثاني","الخيار الثالث","الخيار الرابع"],"correct":0,"grade":2,"feedback":""}]}]}
+
+قواعد: correct رقم (0=أ،1=ب،2=ج،3=د). إذا لم تجد الإجابة ضع 0. أضف 4 خيارات لكل سؤال.`}]})
+      });
+      if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(`خطأ ${resp.status}: ${e.error?.message||""}`);}
       const data=await resp.json();
-      const text=data.content[0].text.trim();
-      const json=JSON.parse(text.replace(/```json|```/g,"").trim());
+      const txt=data.content[0].text.trim();
+      const json=JSON.parse(txt.replace(/```json|```/g,"").trim());
       const parsed={
         title:json.title||"اختبار مستورد",
         standards:(json.standards||[]).map(s=>({
-          id:uid(),
-          name:s.name||"معيار",
+          id:uid(),name:s.name||"معيار",
           questions:(s.questions||[]).map(q=>({
-            id:uid(),
-            text:q.text||"",
+            id:uid(),text:q.text||"",
             options:(q.options||["","","",""]).map(String),
-            correct:Number(q.correct)||0,
-            grade:Number(q.grade)||2,
-            feedback:q.feedback||"",
-            image:null
+            correct:Number(q.correct)||0,grade:Number(q.grade)||2,
+            feedback:q.feedback||"",image:null
           }))
         }))
       };
@@ -1633,6 +1869,31 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
     }catch(e){
       setError("حدث خطأ: "+e.message);
       setStep("upload");
+    }
+  };
+
+  const extractFromPDF=async(file)=>{
+    setProgress("جارٍ قراءة الملف...");
+    try{
+      const text=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=e=>{
+          const binary=e.target.result;
+          const matches=binary.match(/[\u0600-\u06FF\u0750-\u077F\s\w\(\)\.،,؟?!:0-9]+/g)||[];
+          res(matches.filter(m=>m.trim().length>5).join(" "));
+        };
+        r.onerror=rej;
+        r.readAsBinaryString(file);
+      });
+      if(text.trim().length>50){
+        setPastedText(text.slice(0,6000));
+      } else {
+        setError("تعذّر استخراج النص تلقائياً — الرجاء لصق النص يدوياً في الحقل أدناه");
+      }
+      setProgress("");
+    }catch(e){
+      setError("تعذّر قراءة الملف");
+      setProgress("");
     }
   };
 
@@ -1662,49 +1923,20 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
   const deleteStandard=(sIdx)=>setStandards(standards.filter((_,i)=>i!==sIdx));
   const addStandard=()=>setStandards([...standards,{id:uid(),name:"معيار جديد",questions:[]}]);
 
-  const [saveStatus,setSaveStatus]=useState(""); // "" | "saving" | "ok" | "error"
-
-  const saveAsExam=async()=>{
-    // بناء الأسئلة بأقل قدر من البيانات
-    const allQuestions=standards.flatMap(s=>s.questions.map(q=>({
-      id:q.id,
-      text:(q.text||"").substring(0,500),
-      options:(q.options||["","","",""]).map(o=>String(o||"").substring(0,200)),
-      correct:Number(q.correct)||0,
-      grade:Number(q.grade)||2,
-      feedback:(q.feedback||"").substring(0,300),
-      image:null,
-      sn:s.name.substring(0,100) // standardName مختصر
-    })));
-
+  const saveAsExam=()=>{
     const exam={
       id:uid(),
-      title:(examTitle||"اختبار مستورد").substring(0,200),
+      title:examTitle||"اختبار مستورد",
       totalStudents:140,
       createdAt:new Date().toISOString(),
-      timerMinutes:Number(timerMins)||0,
-      isPractice:!!isPractice,
+      timerMinutes:timerMins,
+      isPractice,
       publishAt:null,
       isStandardsBased:true,
-      standardNames:standards.map(s=>s.name.substring(0,100)),
-      subjects:[{name:"الأسئلة",questions:allQuestions}]
+      standards:standards,
+      subjects:[{name:"الأسئلة",questions:standards.flatMap(s=>s.questions.map(q=>({...q,standardName:s.name})))}]
     };
-
-    // فحص الحجم
-    const size=new Blob([JSON.stringify(exam)]).size;
-    if(size>900000){
-      setError(`حجم الاختبار كبير جداً (${Math.round(size/1024)}KB). قلّل عدد الأسئلة أو طوّل النصوص.`);
-      return;
-    }
-
-    setSaveStatus("saving");
-    try{
-      await db.collection("exams").doc(exam.id).set(exam);
-      setSaveStatus("ok");
-    }catch(e){
-      setSaveStatus("error");
-      setError("خطأ في الحفظ: "+(e.message||e.code||"تأكد من اتصال الإنترنت"));
-    }
+    onSaveExam(exam);
   };
 
   return (
@@ -1728,18 +1960,151 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
       {/* Step: Upload */}
       {step==="upload"&&(
         <div>
-          <input ref={fileRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>e.target.files[0]&&extractFromPDF(e.target.files[0])}/>
-          <div className="card" style={{marginBottom:14,textAlign:"center",padding:40,border:"3px dashed #c4b5fd",background:"#faf5ff",cursor:"pointer"}} onClick={()=>fileRef.current?.click()}>
-            <p style={{fontSize:52,marginBottom:12}}>📄</p>
-            <p style={{fontSize:17,fontWeight:800,color:"#7c3aed",marginBottom:6}}>ارفع ملف PDF المعايير</p>
-            <p style={{fontSize:13,color:"#94a3b8",marginBottom:16}}>سيقوم الذكاء الاصطناعي باستخراج المعايير والأسئلة تلقائياً</p>
-            <button className="btn" style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"white",border:"none",borderRadius:10,padding:"11px 28px",fontSize:15,fontWeight:800}}>اختر الملف 📂</button>
+          <input ref={fileRef} type="file" accept=".pdf" style={{display:"none"}} onChange={e=>{if(e.target.files[0])extractFromPDF(e.target.files[0]);}}/>
+          {/* PDF upload */}
+          <div className="card" style={{marginBottom:14,border:"2px dashed #c4b5fd",background:"#faf5ff",padding:"16px 18px"}}>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:10}}>📄 الطريقة ١: رفع PDF (استخراج تلقائي)</p>
+            <button className="btn" style={{background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"white",border:"none",borderRadius:10,padding:"10px 24px",fontSize:14,fontWeight:800,width:"100%"}} onClick={()=>fileRef.current?.click()}>اختر ملف PDF 📂</button>
+            {progress&&<p style={{fontSize:12,color:"#7c3aed",marginTop:8,textAlign:"center"}}>{progress}</p>}
           </div>
-          {error&&<div className="card" style={{background:"#fef2f2",border:"2px solid #fca5a5",padding:"12px 16px"}}><p style={{color:"#dc2626",fontWeight:700}}>{error}</p></div>}
+          {/* Text paste */}
+          <div className="card" style={{marginBottom:14,border:"2px solid #e9d5ff",background:"#faf5ff",padding:"16px 18px"}}>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:8}}>📝 الطريقة ٢: لصق النص مباشرة (الأكثر دقة)</p>
+            <p style={{fontSize:12,color:"#94a3b8",marginBottom:8}}>افتح ملف PDF وانسخ كل النص ثم الصقه هنا</p>
+            <textarea className="inp" value={pastedText} onChange={e=>setPastedText(e.target.value)}
+              style={{minHeight:140,fontSize:13,marginBottom:10,direction:"rtl"}}
+              placeholder="الصق نص الأسئلة والمعايير هنا..."/>
+            <button className="btn btn-blue" style={{width:"100%",padding:"11px",fontSize:15,fontWeight:800}}
+              onClick={()=>callClaudeAPI(pastedText)} disabled={!pastedText.trim()}>
+              🤖 تحليل بالذكاء الاصطناعي
+            </button>
+          </div>
+          {/* Method 3: 3 Image drop zones */}
+          <div className="card" style={{marginBottom:14,border:"2px solid #7c3aed",background:"#faf5ff",padding:"16px 18px"}}>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:2}}>🖼️ الطريقة ٣: إفلات صور مقصوصة من PDF (حتى ٣ صور)</p>
+            <p style={{fontSize:12,color:"#94a3b8",marginBottom:14}}>اقص صفحات أو أجزاء من PDF وأفلتها — الذكاء الاصطناعي يفهم النصوص والرسومات والصور التوضيحية</p>
+
+            {/* 3 drop slots */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:12}}>
+              {[0,1,2].map(idx=>{
+                const slot=imgSlots[idx];
+                const inputId=`imgSlot${idx}`;
+                return (
+                  <div key={idx}>
+                    <p style={{fontSize:11,fontWeight:700,color:"#6b21a8",marginBottom:5,textAlign:"center"}}>
+                      {["الصورة الأولى","الصورة الثانية","الصورة الثالثة"][idx]}
+                      {slot&&<span style={{color:"#16a34a",marginRight:4}}>✓</span>}
+                    </p>
+                    <div
+                      onDragOver={e=>{e.preventDefault();e.currentTarget.style.background="#ede9fe";e.currentTarget.style.borderColor="#6d28d9";}}
+                      onDragLeave={e=>{e.currentTarget.style.background=slot?"#f0ebff":activeSlot===idx?"#eff6ff":"#fdf8ff";e.currentTarget.style.borderColor=slot?"#7c3aed":activeSlot===idx?"#2563eb":"#c4b5fd";}}
+                      onDrop={e=>{
+                        e.preventDefault();
+                        e.currentTarget.style.background=slot?"#f0ebff":"#fdf8ff";
+                        e.currentTarget.style.borderColor=slot?"#7c3aed":"#c4b5fd";
+                        const file=e.dataTransfer.files[0];
+                        if(file&&file.type.startsWith("image/")){handleDroppedImageSlot(idx,file);setActiveSlot(null);}
+                      }}
+                      onClick={e=>{
+                        if(slot){document.getElementById(inputId)?.click();return;}
+                        if(activeSlot===idx){setActiveSlot(null);}
+                        else{setActiveSlot(idx);}
+                      }}
+                      style={{
+                        border:`2px ${activeSlot===idx?"solid":"dashed"} ${slot?"#7c3aed":activeSlot===idx?"#2563eb":"#c4b5fd"}`,
+                        borderRadius:10,
+                        background:slot?"#f0ebff":activeSlot===idx?"#eff6ff":"#fdf8ff",
+                        minHeight:slot?0:100,
+                        display:"flex",
+                        flexDirection:"column",
+                        alignItems:"center",
+                        justifyContent:"center",
+                        gap:6,
+                        cursor:"pointer",
+                        transition:"all .2s",
+                        padding:slot?6:12,
+                        position:"relative",
+                        overflow:"hidden",
+                        boxShadow:activeSlot===idx?"0 0 0 3px rgba(37,99,235,.2)":"none"
+                      }}>
+                      <input id={inputId} type="file" accept="image/*" style={{display:"none"}}
+                        onChange={e=>{if(e.target.files[0]){handleDroppedImageSlot(idx,e.target.files[0]);setActiveSlot(null);}}}/>
+                      {slot ? (
+                        <div style={{position:"relative",width:"100%"}}>
+                          <img src={slot.preview} style={{width:"100%",maxHeight:140,objectFit:"contain",borderRadius:7,display:"block"}} alt={`slot${idx}`}/>
+                          <div
+                            onMouseEnter={e=>e.currentTarget.style.opacity=1}
+                            onMouseLeave={e=>e.currentTarget.style.opacity=0}
+                            style={{position:"absolute",inset:0,background:"rgba(109,40,217,.6)",borderRadius:7,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,opacity:0,transition:"opacity .2s"}}>
+                            <p style={{color:"white",fontWeight:800,fontSize:12}}>🔄 استبدال</p>
+                            <button
+                              onClick={e=>{e.stopPropagation();clearSlot(idx);}}
+                              style={{background:"#ef4444",color:"white",border:"none",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"Tajawal"}}>
+                              ✕ حذف
+                            </button>
+                          </div>
+                        </div>
+                      ):(
+                        <>
+                          <span style={{fontSize:30,animation:activeSlot===idx?"none":`float ${2.5+idx*0.3}s ease-in-out infinite`}}>
+                            {activeSlot===idx?"📋":"🖼️"}
+                          </span>
+                          {activeSlot===idx?(
+                            <>
+                              <p style={{fontSize:11,fontWeight:800,color:"#2563eb",textAlign:"center",lineHeight:1.5}}>
+                                ✅ جاهز للصق<br/>اضغط Ctrl+V
+                              </p>
+                              <p style={{fontSize:10,color:"#64748b",textAlign:"center"}}>أو أفلت الصورة هنا</p>
+                              <div style={{width:8,height:8,borderRadius:"50%",background:"#2563eb",animation:"pulse .8s infinite",marginTop:2}}/>
+                            </>
+                          ):(
+                            <>
+                              <p style={{fontSize:11,fontWeight:700,color:"#7c3aed",textAlign:"center"}}>انقر للصق أو أفلت</p>
+                              <p style={{fontSize:10,color:"#94a3b8",textAlign:"center"}}>PNG • JPG • WEBP</p>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* count badge */}
+            {imgSlots.some(Boolean)&&(
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",background:"#f0ebff",borderRadius:8,border:"1px solid #e9d5ff"}}>
+                <span style={{fontSize:13}}>🖼️</span>
+                <p style={{fontSize:13,color:"#6b21a8",fontWeight:700,flex:1}}>
+                  {imgSlots.filter(Boolean).length} صورة جاهزة للتحليل
+                  {imgSlots.filter(Boolean).length<3&&<span style={{color:"#94a3b8",fontWeight:400}}> — يمكنك إضافة {3-imgSlots.filter(Boolean).length} أكثر</span>}
+                </p>
+                <span style={{fontSize:11,color:"#7c3aed",fontWeight:700,background:"white",padding:"2px 8px",borderRadius:5,border:"1px solid #c4b5fd"}}>
+                  الذكاء يحلل النصوص والرسوم 🔍
+                </span>
+              </div>
+            )}
+
+            <button
+              className="btn"
+              style={{
+                width:"100%",padding:"12px",fontSize:15,fontWeight:800,
+                background:imgSlots.some(Boolean)?"linear-gradient(135deg,#7c3aed,#6d28d9)":"#e2e8f0",
+                color:imgSlots.some(Boolean)?"white":"#94a3b8",
+                border:"none",borderRadius:10,cursor:imgSlots.some(Boolean)?"pointer":"not-allowed",
+                transition:"all .2s"
+              }}
+              disabled={!imgSlots.some(Boolean)}
+              onClick={()=>callClaudeAPIWithImages()}>
+              🤖 تحليل {imgSlots.filter(Boolean).length>0?`${imgSlots.filter(Boolean).length} صور`:"الصور"} بالذكاء الاصطناعي
+            </button>
+          </div>
+
+          {error&&<div className="card" style={{background:"#fef2f2",border:"2px solid #fca5a5",padding:"12px 16px",marginBottom:10}}><p style={{color:"#dc2626",fontWeight:700}}>{error}</p></div>}
           <div className="card" style={{padding:"14px 18px",background:"#f5f3ff",border:"2px solid #e9d5ff"}}>
             <p style={{fontWeight:800,color:"#7c3aed",marginBottom:8,fontSize:14}}>📋 ماذا يفعل الاستيراد الذكي؟</p>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {["📌 يقرأ المعايير الدراسية من الملف","❓ يستخرج الأسئلة مع 4 خيارات لكل سؤال","✅ يحدد الإجابات الصحيحة إذا كانت موجودة","✏️ يتيح لك التعديل قبل الحفظ","💾 يحفظ كاختبار جاهز مع تحليل النتائج"].map((t,i)=>(
+              {["📌 يقرأ المعايير الدراسية من النص","❓ يستخرج الأسئلة مع 4 خيارات لكل سؤال","✅ يحدد الإجابات الصحيحة إذا كانت موجودة","✏️ يتيح لك التعديل قبل الحفظ","💾 يحفظ كاختبار جاهز مع تحليل النتائج"].map((t,i)=>(
                 <p key={i} style={{fontSize:13,color:"#6b21a8",fontWeight:600}}>{t}</p>
               ))}
             </div>
@@ -1845,6 +2210,15 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
                   </div>
                   <input className="inp" value={q.feedback} onChange={e=>updateQ(sIdx,qIdx,"feedback",e.target.value)}
                     style={{fontSize:13,padding:"7px 12px"}} placeholder="💡 تغذية راجعة (اختياري)"/>
+
+                  {/* Per-question image paste box */}
+                  <div style={{marginTop:10}}>
+                    <p style={{fontSize:11,fontWeight:700,color:"#475569",marginBottom:4}}>🖼️ صورة توضيحية للسؤال (اختياري)</p>
+                    <PasteImageBox
+                      image={q.image||null}
+                      onChange={img=>updateQ(sIdx,qIdx,"image",img)}
+                    />
+                  </div>
                 </div>
               ))}
               <button onClick={()=>addQuestion(sIdx)} className="btn" style={{width:"100%",background:"#f5f3ff",color:"#7c3aed",border:"2px dashed #c4b5fd",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700}}>
@@ -1859,24 +2233,13 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
 
           {/* Action buttons */}
           <div style={{display:"flex",gap:10}}>
-            <button onClick={saveAsExam} disabled={saveStatus==="saving"} className="btn" style={{flex:2,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"white",border:"none",borderRadius:10,padding:"13px",fontSize:16,fontWeight:800,opacity:saveStatus==="saving"?0.7:1}}>
-              {saveStatus==="saving"?"⏳ جارٍ الحفظ...":saveStatus==="ok"?"✅ تم الحفظ!":"💾 حفظ كاختبار"}
+            <button onClick={saveAsExam} className="btn" style={{flex:2,background:"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"white",border:"none",borderRadius:10,padding:"13px",fontSize:16,fontWeight:800}}>
+              💾 حفظ كاختبار
             </button>
-            <button onClick={()=>{setStep("upload");setStandards([]);setSaveStatus("");}} className="btn btn-ghost" style={{flex:1}}>
+            <button onClick={()=>{setStep("upload");setStandards([]);}} className="btn btn-ghost" style={{flex:1}}>
               🔄 استيراد جديد
             </button>
           </div>
-          {saveStatus==="ok"&&(
-            <div style={{marginTop:12,padding:"12px 16px",background:"#dcfce7",borderRadius:10,border:"2px solid #86efac",textAlign:"center"}}>
-              <p style={{color:"#166534",fontWeight:800,fontSize:14}}>✅ تم حفظ الاختبار بنجاح! سيظهر في لوحة التحكم</p>
-              <button onClick={onBack} className="btn" style={{marginTop:8,background:"#166534",color:"white",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700}}>العودة للوحة التحكم</button>
-            </div>
-          )}
-          {saveStatus==="error"&&(
-            <div style={{marginTop:12,padding:"12px 16px",background:"#fef2f2",borderRadius:10,border:"2px solid #fca5a5"}}>
-              <p style={{color:"#dc2626",fontWeight:800,fontSize:13}}>{error}</p>
-            </div>
-          )}
         </div>
       )}
     </div>
