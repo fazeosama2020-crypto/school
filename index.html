@@ -295,6 +295,13 @@ tr:hover td{background:var(--green-pale)}
 .llabel{font-size:11px;font-weight:700;margin-bottom:2px}
 .ltext{font-size:11.5px;color:var(--text-mid);line-height:1.6}
 
+/* image caption */
+.islot-wrap{display:flex;flex-direction:column;gap:4px}
+.img-caption-inp{width:100%;border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-family:'Cairo',sans-serif;font-size:11px;color:var(--text-dark);background:#fffde7;outline:none;transition:.15s}
+.img-caption-inp:focus{border-color:#f9a825;background:#fff}
+.img-caption-inp::placeholder{color:#bbb}
+.img-caption-view{font-size:11px;color:#666;background:#fffde7;border-radius:6px;padding:4px 8px;border:1px solid #ffe082;line-height:1.5}
+
 /* responsive */
 @media(max-width:640px){
   .home-cards{grid-template-columns:1fr}
@@ -972,6 +979,7 @@ let FILE = null;     // 'teacher' | 'director'
 let CRIT_ID = null;  // open criterion
 let TMP_RATING = 0;
 let TMP_IMGS = ['','','','',''];
+let TMP_CAPTIONS = ['','','','',''];
 
 /* ════════════════════════════════════════════════
    STORAGE
@@ -1479,6 +1487,8 @@ async function openCrit(id){
   TMP_RATING=ev.rating||0;
   TMP_IMGS=[...(ev.images||['','','','',''])];
   while(TMP_IMGS.length<5) TMP_IMGS.push('');
+  TMP_CAPTIONS=[...(ev.captions||['','','','',''])];
+  while(TMP_CAPTIONS.length<5) TMP_CAPTIONS.push('');
 
   _buildModal(c, isT, false, null, null);
   document.getElementById('noteArea').value=ev.notes||'';
@@ -1499,6 +1509,8 @@ async function evalTeacherCrit(teacherEmail, critId){
 
   TMP_IMGS=[...(tEv.images||['','','','',''])];
   while(TMP_IMGS.length<5) TMP_IMGS.push('');
+  TMP_CAPTIONS=[...(tEv.captions||['','','','',''])];
+  while(TMP_CAPTIONS.length<5) TMP_CAPTIONS.push('');
 
   const imgCount=TMP_IMGS.filter(Boolean).length;
   TMP_RATING=tEv.rating||calcRating(imgCount);
@@ -1546,6 +1558,7 @@ async function saveCrit(){
   data[key].evaluations[CRIT_ID]={
     rating: isTeacherUser ? existingRating : TMP_RATING,
     images:[...TMP_IMGS],
+    captions:[...TMP_CAPTIONS],
     notes: document.getElementById('noteArea').value,
     updatedAt: new Date().toISOString()
   };
@@ -1676,17 +1689,24 @@ function renderImgSlots(isT=false, readOnly=false){
   grid.innerHTML='';
   for(let i=0;i<5;i++){
     const has=!!TMP_IMGS[i];
+    const cap=TMP_CAPTIONS[i]||'';
     if(readOnly){
       grid.innerHTML+=`
-        <div class="islot ${isT?'t-slot':''} ${has?'has-img':''}" style="cursor:default">
-          ${has?`<img src="${TMP_IMGS[i]}" alt="شاهد">`
-               :`<div class="si" style="opacity:.4">—</div><div class="sn">لا توجد صورة</div>`}
+        <div class="islot-wrap">
+          <div class="islot ${isT?'t-slot':''} ${has?'has-img':''}" style="cursor:default">
+            ${has?`<img src="${TMP_IMGS[i]}" alt="شاهد">`
+                 :`<div class="si" style="opacity:.4">—</div><div class="sn">لا توجد صورة</div>`}
+          </div>
+          ${has&&cap?`<div class="img-caption-view">💬 ${cap}</div>`:''}
         </div>`;
     } else {
       grid.innerHTML+=`
-        <div class="islot ${isT?'t-slot':''} ${has?'has-img':''}" id="slot${i}" onclick="trigUp(${i})">
-          ${has?`<img src="${TMP_IMGS[i]}" alt="شاهد"><div class="irem" onclick="remImg(event,${i})">✕</div>`
-               :`<div class="si">📷</div><div class="sn">صورة ${i+1}</div>`}
+        <div class="islot-wrap">
+          <div class="islot ${isT?'t-slot':''} ${has?'has-img':''}" id="slot${i}" onclick="trigUp(${i})">
+            ${has?`<img src="${TMP_IMGS[i]}" alt="شاهد"><div class="irem" onclick="remImg(event,${i})">✕</div>`
+                 :`<div class="si">📷</div><div class="sn">صورة ${i+1}</div>`}
+          </div>
+          ${has?`<input class="img-caption-inp" type="text" maxlength="80" placeholder="💬 تعليق اختياري..." value="${cap.replace(/"/g,'&quot;')}" oninput="TMP_CAPTIONS[${i}]=this.value" dir="rtl">`:''}
         </div>`;
     }
   }
@@ -1710,7 +1730,7 @@ function handleUpload(i,inp){
   };
   reader.readAsDataURL(file);
 }
-function remImg(e,i){ e.stopPropagation(); TMP_IMGS[i]=''; renderImgSlots(FILE==='teacher'); }
+function remImg(e,i){ e.stopPropagation(); TMP_IMGS[i]=''; TMP_CAPTIONS[i]=''; renderImgSlots(FILE==='teacher'); }
 
 function saveCrit(){
   if(!CU||!CRIT_ID||(!FILE&&!EVAL_TARGET)) return;
@@ -1931,7 +1951,13 @@ function viewReport(email,key){
     const rColor=r===5?'#1b5e20':r===4?'#2e7d32':r===3?'#1565c0':r===2?'#e65100':r===1?'#b71c1c':'#999';
     const rBg=r===5?'#e8f5e9':r===4?'#f1f8e9':r===3?'#e3f2fd':r===2?'#fff3e0':r===1?'#ffebee':'#f5f5f5';
     const stars='★'.repeat(r)+'☆'.repeat(5-r);
-    const imgHtml=imgs.length?`<div class="img-row">${imgs.map(s=>`<img class="ev-img" src="${s}">`).join('')}</div>`:'<span style="color:#bbb;font-size:11px">لا توجد صور مرفوعة</span>';
+    const imgHtml=imgs.length?`<div class="img-row">${imgs.map((s,idx)=>{
+      const cap=(ev.captions&&ev.captions[idx])||'';
+      return `<div style="display:inline-block;text-align:center;margin:3px">
+        <img class="ev-img" src="${s}">
+        ${cap?`<div style="font-size:10px;color:#666;max-width:70px;word-break:break-word;margin-top:3px">${cap}</div>`:''}
+      </div>`;
+    }).join('')}</div>`:'<span style="color:#bbb;font-size:11px">لا توجد صور مرفوعة</span>';
     const note=ev.directorNote||ev.notes||'';
     return `
       <div class="crit-card" style="border-right:4px solid ${c.color||'#006C35'}">
