@@ -1669,7 +1669,7 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
   const [error,setError]=useState("");
   const [progress,setProgress]=useState("");
   const [pastedText,setPastedText]=useState("");
-  const [imgSlots,setImgSlots]=useState([null,null,null]);
+  const [imgSlots,setImgSlots]=useState([null,null,null,null]);
   const [activeSlot,setActiveSlot]=useState(null);
   const fileRef=useRef(null);
   const imgInputRef=useRef(null);
@@ -2006,18 +2006,18 @@ ${text.slice(0,6000)}
           </div>
           {/* Method 3: 3 Image drop zones */}
           <div className="card" style={{marginBottom:14,border:"2px solid #7c3aed",background:"#faf5ff",padding:"16px 18px"}}>
-            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:2}}>🖼️ الطريقة ٣: إفلات صور مقصوصة من PDF (حتى ٣ صور)</p>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:2}}>🖼️ الطريقة ٣: إفلات صور مقصوصة من PDF (حتى ٤ صور)</p>
             <p style={{fontSize:12,color:"#94a3b8",marginBottom:14}}>اقص صفحات أو أجزاء من PDF وأفلتها — الذكاء الاصطناعي يفهم النصوص والرسومات والصور التوضيحية</p>
 
-            {/* 3 drop slots */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:12}}>
-              {[0,1,2].map(idx=>{
+            {/* 4 drop slots */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10,marginBottom:12}}>
+              {[0,1,2,3].map(idx=>{
                 const slot=imgSlots[idx];
                 const inputId=`imgSlot${idx}`;
                 return (
                   <div key={idx}>
                     <p style={{fontSize:11,fontWeight:700,color:"#6b21a8",marginBottom:5,textAlign:"center"}}>
-                      {["الصورة الأولى","الصورة الثانية","الصورة الثالثة"][idx]}
+                      {["الصورة الأولى","الصورة الثانية","الصورة الثالثة","الصورة الرابعة"][idx]}
                       {slot&&<span style={{color:"#16a34a",marginRight:4}}>✓</span>}
                     </p>
                     <div
