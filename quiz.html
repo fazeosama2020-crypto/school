@@ -663,7 +663,13 @@ function QuizScreen({exam,answers,setAnswers,subjectIdx,setSubjectIdx,onSubmit,o
                   <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
                 </div>
                 {q.image&&(
-                  <div style={{flexShrink:0,width:160}}>
+                  <div style={{flexShrink:0,width:
+                    q.imgSize==="small"?"20%":
+                    q.imgSize==="large"?"60%":
+                    q.imgSize==="full"?"100%":
+                    q.imgSize==="custom"?`${q.imgCustomPct||50}%`:
+                    "40%"
+                  }}>
                     <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:10,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
                   </div>
                 )}
@@ -774,7 +780,13 @@ function ResultsScreen({res,student,examTitle,exam,answers,onBack}){
                           <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
                         </div>
                         {q.image&&(
-                          <div style={{flexShrink:0,width:140}}>
+                          <div style={{flexShrink:0,width:
+                            q.imgSize==="small"?"20%":
+                            q.imgSize==="large"?"60%":
+                            q.imgSize==="full"?"100%":
+                            q.imgSize==="custom"?`${q.imgCustomPct||50}%`:
+                            "40%"
+                          }}>
                             <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:8,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
                           </div>
                         )}
@@ -1100,9 +1112,48 @@ function EditorScreen({exam,subjectIdx,setSubjectIdx,onUpdateTitle,onAddQ,onUpda
 
             <div style={{marginBottom:12}}>
               {q.image?(
-                <div style={{position:"relative"}}>
-                  <img src={q.image} alt="" style={{width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,border:"2px solid #e2e8f0"}}/>
-                  <button className="btn" style={{position:"absolute",top:8,left:8,background:"rgba(0,0,0,.7)",color:"white",border:"none",borderRadius:7,padding:"5px 12px",fontSize:13}} onClick={()=>onUpdateQ(q.id,"image",null)}>✕ حذف الصورة</button>
+                <div>
+                  {/* Size controls */}
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+                    <label style={{fontSize:12,fontWeight:700,color:"#475569",flexShrink:0}}>📐 حجم الصورة:</label>
+                    <select
+                      value={q.imgSize||"medium"}
+                      onChange={e=>onUpdateQ(q.id,"imgSize",e.target.value)}
+                      style={{padding:"5px 10px",border:"2px solid #e2e8f0",borderRadius:8,fontFamily:"Tajawal",fontSize:12,fontWeight:700,color:"#334155",background:"white",cursor:"pointer"}}>
+                      <option value="small">صغير (25%)</option>
+                      <option value="medium">متوسط (50%)</option>
+                      <option value="large">كبير (75%)</option>
+                      <option value="full">كامل (100%)</option>
+                      <option value="custom">مخصص</option>
+                    </select>
+                    {(q.imgSize==="custom")&&(
+                      <div style={{display:"flex",alignItems:"center",gap:5}}>
+                        <input type="range" min={10} max={100} value={q.imgCustomPct||50}
+                          onChange={e=>onUpdateQ(q.id,"imgCustomPct",Number(e.target.value))}
+                          style={{width:100}}/>
+                        <span style={{fontSize:12,fontWeight:700,color:"#475569",minWidth:35}}>{q.imgCustomPct||50}%</span>
+                      </div>
+                    )}
+                    <span style={{fontSize:11,color:"#94a3b8"}}>أو اسحب حدود الصورة ↕</span>
+                  </div>
+                  {/* Resizable image */}
+                  <div style={{position:"relative",display:"inline-block",width:
+                    q.imgSize==="small"?"25%":
+                    q.imgSize==="large"?"75%":
+                    q.imgSize==="full"?"100%":
+                    q.imgSize==="custom"?`${q.imgCustomPct||50}%`:
+                    "50%"
+                  }}>
+                    <div style={{
+                      resize:"both",overflow:"hidden",
+                      border:"2px solid #2563eb",borderRadius:10,
+                      minWidth:60,minHeight:40,
+                      display:"inline-block",width:"100%"
+                    }}>
+                      <img src={q.image} alt="" style={{width:"100%",height:"100%",objectFit:"contain",display:"block",borderRadius:8,background:"#f8fafc"}}/>
+                    </div>
+                    <button className="btn" style={{position:"absolute",top:6,left:6,background:"rgba(0,0,0,.75)",color:"white",border:"none",borderRadius:7,padding:"4px 10px",fontSize:12}} onClick={()=>onUpdateQ(q.id,"image",null)}>✕ حذف</button>
+                  </div>
                 </div>
               ):(
                 <div>
@@ -1669,7 +1720,7 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
   const [error,setError]=useState("");
   const [progress,setProgress]=useState("");
   const [pastedText,setPastedText]=useState("");
-  const [imgSlots,setImgSlots]=useState([null,null,null,null]);
+  const [imgSlots,setImgSlots]=useState([null,null,null]);
   const [activeSlot,setActiveSlot]=useState(null);
   const fileRef=useRef(null);
   const imgInputRef=useRef(null);
@@ -2006,18 +2057,18 @@ ${text.slice(0,6000)}
           </div>
           {/* Method 3: 3 Image drop zones */}
           <div className="card" style={{marginBottom:14,border:"2px solid #7c3aed",background:"#faf5ff",padding:"16px 18px"}}>
-            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:2}}>🖼️ الطريقة ٣: إفلات صور مقصوصة من PDF (حتى ٤ صور)</p>
+            <p style={{fontWeight:800,color:"#7c3aed",fontSize:14,marginBottom:2}}>🖼️ الطريقة ٣: إفلات صور مقصوصة من PDF (حتى ٣ صور)</p>
             <p style={{fontSize:12,color:"#94a3b8",marginBottom:14}}>اقص صفحات أو أجزاء من PDF وأفلتها — الذكاء الاصطناعي يفهم النصوص والرسومات والصور التوضيحية</p>
 
-            {/* 4 drop slots */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10,marginBottom:12}}>
-              {[0,1,2,3].map(idx=>{
+            {/* 3 drop slots */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:12}}>
+              {[0,1,2].map(idx=>{
                 const slot=imgSlots[idx];
                 const inputId=`imgSlot${idx}`;
                 return (
                   <div key={idx}>
                     <p style={{fontSize:11,fontWeight:700,color:"#6b21a8",marginBottom:5,textAlign:"center"}}>
-                      {["الصورة الأولى","الصورة الثانية","الصورة الثالثة","الصورة الرابعة"][idx]}
+                      {["الصورة الأولى","الصورة الثانية","الصورة الثالثة"][idx]}
                       {slot&&<span style={{color:"#16a34a",marginRight:4}}>✓</span>}
                     </p>
                     <div
