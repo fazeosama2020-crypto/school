@@ -1030,29 +1030,52 @@ async function initFirebase(cfg){
 }
 
 // ── Key helpers ──
-const fbKey = email => email.replace(/[.\[\]#$/]/g,'_');
+const fbKey = email => email.replace(/\./g,'_dot_').replace(/@/g,'_at_').replace(/[#$/\[\]]/g,'_');
 
-// ── Users ──
-async function getUsers(){
-  if(!fbReady) return JSON.parse(localStorage.getItem('ub_users')||'{}');
-  const snap = await db.collection('users').get();
-  const users = {};
-  snap.forEach(d => users[d.id.replace(/_/g,'.')] = d.data());
-  return users;
-}
+// ── Save user ──
 async function saveUser(email, data){
-  if(fbReady) await db.collection('users').doc(fbKey(email)).set(data, {merge:true});
+  // Always save to localStorage
   const cache = JSON.parse(localStorage.getItem('ub_users')||'{}');
   cache[email] = data;
   localStorage.setItem('ub_users', JSON.stringify(cache));
-}
-async function getUser(email){
+  // Save to Firebase
   if(fbReady){
+    try{ await db.collection('users').doc(fbKey(email)).set(data, {merge:true}); }
+    catch(e){ console.warn('saveUser Firebase failed:', e); }
+  }
+}
+
+// ── Users ──
+async function getUsers(){
+  const local = JSON.parse(localStorage.getItem('ub_users')||'{}');
+  if(!fbReady) return local;
+  try{
+    const snap = await db.collection('users').get();
+    const remote = {};
+    snap.forEach(d => remote[d.id.replace(/_dot_/g,'.').replace(/_at_/g,'@')] = d.data());
+    // Merge: remote takes priority, but include local users not yet synced
+    const merged = {...local, ...remote};
+    // Sync local users to Firebase if not there yet
+    Object.keys(local).forEach(async email=>{
+      if(!remote[fbKey(email)]){
+        try{ await db.collection('users').doc(fbKey(email)).set(local[email]); }catch(e){}
+      }
+    });
+    return merged;
+  }catch(e){
+    console.warn('getUsers Firebase failed, using local:', e);
+    return local;
+  }
+}
+
+async function getUser(email){
+  const local = JSON.parse(localStorage.getItem('ub_users')||'{}');
+  if(local[email]) return local[email]; // Fast path
+  if(!fbReady) return null;
+  try{
     const doc = await db.collection('users').doc(fbKey(email)).get();
     return doc.exists ? doc.data() : null;
-  }
-  const cache = JSON.parse(localStorage.getItem('ub_users')||'{}');
-  return cache[email] || null;
+  }catch(e){ return null; }
 }
 
 // ── Evaluations ──
@@ -1983,8 +2006,7 @@ async function viewReport(email,key){
       </div>`;
   }).join('');
 
-  const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html>
+  const reportHTML = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="UTF-8">
@@ -2183,7 +2205,15 @@ body{font-family:'Cairo',sans-serif;direction:rtl;color:#222;background:#f0f4f8;
     مدرسة عبيدة بن الحارث المتوسطة · الإدارة العامة للتعليم بمحافظة جدة · وزارة التعليم · 1447 هـ
   </div>
 </div>
-</body></html>`);
+</body></html>`;
+  // Use blob URL to avoid popup blockers
+  const blob = new Blob([reportHTML], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
 }
 
 function openAdminSettings(){
