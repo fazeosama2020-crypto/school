@@ -1833,11 +1833,12 @@ async function fillTeachersTable(emails, users){
 ════════════════════════════════════════════════ */
 let EVAL_TEACHER_EMAIL = null;
 
-function openTeacherEval(email){
+async function openTeacherEval(email){
   EVAL_TEACHER_EMAIL = email;
-  const users=getUsers();
+  const users=await getUsers();
   const u=users[email];
-  const data=getData(email);
+  if(!u){ showToast('خطأ: لم يتم العثور على المعلم'); return; }
+  const data=await getData(email);
   const evals=(data.teacher&&data.teacher.evaluations)||{};
 
   // Build evaluation grid page
@@ -1919,10 +1920,11 @@ function restoreAdminPage(){
   loadAdmin();
 }
 
-function viewReport(email,key){
-  const users=getUsers();
+async function viewReport(email,key){
+  const users=await getUsers();
   const u=users[email];
-  const data=getData(email);
+  if(!u){ showToast('خطأ: لم يتم العثور على المعلم'); return; }
+  const data=await getData(email);
   const evals=(data[key]&&data[key].evaluations)||{};
   const criteria=key==='teacher'?TEACHER_CRITERIA:DIRECTOR_CRITERIA;
 
