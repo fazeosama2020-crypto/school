@@ -1846,6 +1846,7 @@ async function fillTeachersTable(emails, users){
       <td style="display:flex;flex-direction:column;gap:4px">
         <button class="vbtn" onclick="viewReport('${email}','teacher')">📄 تقرير</button>
         <button class="vbtn" style="background:var(--gold-light);color:var(--green-dark);border-color:var(--gold)" onclick="openTeacherEval('${email}')">⭐ تقييم</button>
+        <button class="vbtn" style="background:#ffebee;color:#c62828;border-color:#ffcdd2" onclick="deleteTeacher('${email}','${u.name}')">🗑️ حذف</button>
       </td>
     </tr>`;
   }
@@ -2254,6 +2255,32 @@ function saveAdminSettings(){
 document.getElementById('adminSettingsOverlay').addEventListener('click', function(e){
   if(e.target === this) closeAdminSettings();
 });
+async function deleteTeacher(email, name){
+  const confirmed = confirm(`⚠️ هل أنت متأكد من حذف المعلم؟\n\nالاسم: ${name}\nالبريد: ${email}\n\nسيتم حذف جميع بياناته وشواهده نهائياً ولا يمكن التراجع!`);
+  if(!confirmed) return;
+
+  showToast('⏳ جاري الحذف...');
+  try{
+    // Remove from localStorage
+    const users = JSON.parse(localStorage.getItem('ub_users')||'{}');
+    delete users[email];
+    localStorage.setItem('ub_users', JSON.stringify(users));
+    localStorage.removeItem('ub_data_'+email);
+    // Remove from Firebase
+    if(fbReady){
+      const key = fbKey(email);
+      await db.collection('users').doc(key).delete();
+      await db.collection('evaluations').doc(key).delete().catch(()=>{});
+      await db.collection('images').doc(key).delete().catch(()=>{});
+    }
+    showToast('✅ تم حذف المعلم وجميع بياناته بنجاح');
+    loadAdmin();
+  }catch(e){
+    console.error('Delete failed:', e);
+    showToast('❌ حدث خطأ أثناء الحذف');
+  }
+}
+
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
