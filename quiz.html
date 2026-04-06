@@ -67,9 +67,6 @@ textarea{resize:vertical}
 ::-webkit-scrollbar-track{background:#f1f5f9}
 ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
 select.inp{cursor:pointer}
-.frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;margin:0 3px;font-size:.9em}
-.frac .num{border-bottom:1.5px solid currentColor;padding:0 3px;text-align:center}
-.frac .den{padding:0 3px;text-align:center}
 @media print {
   @page { margin: 1cm; size: A4; }
   body { background: white !important; }
@@ -117,19 +114,6 @@ const gradeInfo = (pct) => {
   return {label:"ضعيف",color:"#991b1b",bg:"#fee2e2"};
 };
 
-/* تحويل [بسط/مقام] إلى كسر مرئي */
-const renderMath=(text)=>{
-  if(!text) return "";
-  return text.replace(/\[([^\]\/]+)\/([^\]]+)\]/g,
-    (_,n,d)=>`<span class="frac"><span class="num">${n}</span><span class="den">${d}</span></span>`
-  );
-};
-const MathText=({text,style})=>{
-  const html=renderMath(text||"");
-  if(!html.includes("frac")) return <span style={style}>{text}</span>;
-  return <span style={style} dangerouslySetInnerHTML={{__html:html}}/>;
-};
-
 /* ─── MAIN APP ─── */
 function App(){
   const [screen,setScreen]=useState("home");
@@ -153,7 +137,7 @@ function App(){
   const [showNewExam,setShowNewExam]=useState(false);
   const [adminPass,setAdminPass]=useState("1234");
   const [apiKey,setApiKey]=useState("");
-  const [studentRoster,setStudentRoster]=useState([]); // [{name,number,cls}]
+  const [studentRoster,setStudentRoster]=useState([]);
   const [dbStatus,setDbStatus]=useState("connecting"); // connecting | ok | error
 
   useEffect(()=>{
@@ -280,9 +264,9 @@ function App(){
     setApiKey(k);
     db.collection("settings").doc("config").set({apiKey:k,adminPass},{merge:true});
   };
-  const saveRoster=(roster)=>{
-    setStudentRoster(roster);
-    db.collection("settings").doc("config").set({studentRoster:roster},{merge:true});
+  const saveRoster=(r)=>{
+    setStudentRoster(r);
+    db.collection("settings").doc("config").set({studentRoster:r},{merge:true});
   };
 
   return (
@@ -683,17 +667,11 @@ function QuizScreen({exam,answers,setAnswers,subjectIdx,setSubjectIdx,onSubmit,o
               <div style={{minWidth:30,height:30,borderRadius:8,background:answers[q.id]!==undefined?(practiceResult[q.id]===true?"#166534":practiceResult[q.id]===false?"#dc2626":"#166534"):"#1d4ed8",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,flexShrink:0}}>{qi+1}</div>
               <div style={{flex:1,display:"flex",gap:12,alignItems:"flex-start"}}>
                 <div style={{flex:1}}>
-                  {q.text&&<MathText text={q.text} style={{fontSize:15,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4,display:"block"}}/>}
+                  {q.text&&<p style={{fontSize:15,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
                   <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
                 </div>
                 {q.image&&(
-                  <div style={{flexShrink:0,width:
-                    q.imgSize==="small"?"20%":
-                    q.imgSize==="large"?"60%":
-                    q.imgSize==="full"?"100%":
-                    q.imgSize==="custom"?`${q.imgCustomPct||50}%`:
-                    "40%"
-                  }}>
+                  <div style={{flexShrink:0,width:160}}>
                     <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:10,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
                   </div>
                 )}
@@ -800,17 +778,11 @@ function ResultsScreen({res,student,examTitle,exam,answers,onBack}){
                       <div style={{minWidth:28,height:28,borderRadius:8,background:notAnswered?"#94a3b8":isCorrect?"#166534":"#dc2626",color:"white",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,flexShrink:0}}>{qi+1}</div>
                       <div style={{flex:1,display:"flex",gap:10,alignItems:"flex-start"}}>
                         <div style={{flex:1}}>
-                          {q.text&&<MathText text={q.text} style={{fontSize:14,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4,display:"block"}}/>}
+                          {q.text&&<p style={{fontSize:14,fontWeight:600,color:"#1e293b",lineHeight:1.7,marginBottom:4}}>{q.text}</p>}
                           <span style={{fontSize:12,color:"#94a3b8"}}>({q.grade} درجة)</span>
                         </div>
                         {q.image&&(
-                          <div style={{flexShrink:0,width:
-                            q.imgSize==="small"?"20%":
-                            q.imgSize==="large"?"60%":
-                            q.imgSize==="full"?"100%":
-                            q.imgSize==="custom"?`${q.imgCustomPct||50}%`:
-                            "40%"
-                          }}>
+                          <div style={{flexShrink:0,width:140}}>
                             <img src={q.image} alt="صورة السؤال" style={{width:"100%",borderRadius:8,border:"2px solid #e2e8f0",objectFit:"contain",background:"#f8fafc",display:"block"}}/>
                           </div>
                         )}
@@ -969,39 +941,40 @@ function AdminPanel({exams,allResults,onNewExam,showNewExam,newTitle,setNewTitle
             </div>
             <p style={{fontSize:11,color:"#78350f",marginTop:5}}>احصل على المفتاح من: console.anthropic.com &nbsp;•&nbsp; {apiKey?"✅ محفوظ":"❌ غير محفوظ"}</p>
           </div>
-
-          {/* Roster upload */}
           <div style={{marginTop:12,paddingTop:12,borderTop:"1px dashed #fde68a"}}>
-            <label style={{fontSize:12,fontWeight:700,color:"#92400e",display:"block",marginBottom:6}}>📋 كشف الطلاب (CSV) — لمتابعة المشاركة</label>
-            <input ref={rosterRef} type="file" accept=".csv,.txt" style={{display:"none"}} onChange={async e=>{
+            <label style={{fontSize:12,fontWeight:700,color:"#92400e",display:"block",marginBottom:6}}>📋 كشف الطلاب (CSV)</label>
+            <input ref={rosterRef} type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>{
               const file=e.target.files[0]; if(!file) return;
-              const text=await file.text();
-              const lines=text.split(/\r?\n/).filter(l=>l.trim());
-              const roster=[];
-              lines.forEach((line,i)=>{
-                if(i===0&&(line.includes("اسم")||line.toLowerCase().includes("name"))) return;
-                const cols=line.split(/,|\t/);
-                const name=(cols[0]||"").trim().replace(/"/g,"");
-                const number=(cols[1]||"").trim().replace(/"/g,"");
-                const cls=(cols[2]||"").trim().replace(/"/g,"");
-                if(name&&name.length>1) roster.push({name,number:number||String(i),cls:cls||"غير محدد"});
-              });
-              if(roster.length>0){ onSaveRoster(roster); alert(`✅ تم استيراد ${roster.length} طالب`); }
-              else alert("لم يتم العثور على بيانات. الصيغة المطلوبة: الاسم، الرقم، الفصل");
+              const reader=new FileReader();
+              reader.onload=ev=>{
+                const lines=(ev.target.result).split(/\r?\n/).filter(l=>l.trim());
+                const roster=[];
+                lines.forEach((line,i)=>{
+                  if(i===0&&(line.includes("اسم")||line.toLowerCase().includes("name"))) return;
+                  const cols=line.split(/,|\t/);
+                  const name=(cols[0]||"").trim().replace(/"/g,"");
+                  const number=(cols[1]||"").trim().replace(/"/g,"");
+                  const cls=(cols[2]||"").trim().replace(/"/g,"");
+                  if(name&&name.length>1) roster.push({name,number:number||String(i),cls:cls||"غير محدد"});
+                });
+                if(roster.length>0){onSaveRoster(roster);alert("✅ تم استيراد "+roster.length+" طالب");}
+                else alert("لم يتم العثور على بيانات. الصيغة: الاسم، الرقم، الفصل");
+              };
+              reader.readAsText(file,"utf-8");
               e.target.value="";
             }}/>
             <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-              <button className="btn" style={{background:"#166534",color:"white",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:700}} onClick={()=>rosterRef.current?.click()}>
+              <button className="btn" style={{background:"#166534",color:"white",border:"none",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700}} onClick={()=>rosterRef.current&&rosterRef.current.click()}>
                 📥 رفع كشف الطلاب CSV
               </button>
               {studentRoster.length>0&&(
-                <>
-                  <span style={{fontSize:12,color:"#166534",fontWeight:700}}>✅ {studentRoster.length} طالب محمّل</span>
-                  <button onClick={()=>{if(window.confirm("حذف كشف الطلاب؟")) onSaveRoster([]);}} style={{background:"#fef2f2",color:"#ef4444",border:"1px solid #fca5a5",borderRadius:7,padding:"5px 10px",fontSize:11,cursor:"pointer",fontFamily:"Tajawal"}}>🗑 حذف</button>
-                </>
+                <span style={{fontSize:12,color:"#166534",fontWeight:700}}>✅ {studentRoster.length} طالب محمّل</span>
+              )}
+              {studentRoster.length>0&&(
+                <button onClick={()=>{if(window.confirm("حذف كشف الطلاب؟")) onSaveRoster([]);}} style={{background:"#fef2f2",color:"#ef4444",border:"1px solid #fca5a5",borderRadius:7,padding:"4px 10px",fontSize:11,cursor:"pointer",fontFamily:"Tajawal"}}>🗑</button>
               )}
             </div>
-            <p style={{fontSize:11,color:"#78350f",marginTop:5}}>صيغة الملف: عمود١=الاسم، عمود٢=الرقم، عمود٣=الفصل — صدّر Excel كـ CSV</p>
+            <p style={{fontSize:11,color:"#78350f",marginTop:5}}>عمود١=الاسم، عمود٢=الرقم، عمود٣=الفصل</p>
           </div>
         </div>
       )}
@@ -1167,82 +1140,13 @@ function EditorScreen({exam,subjectIdx,setSubjectIdx,onUpdateTitle,onAddQ,onUpda
               <button className="btn" style={{background:"#fef2f2",color:"#ef4444",border:"none",borderRadius:7,padding:"5px 11px",fontSize:13,fontWeight:700}} onClick={()=>onDeleteQ(q.id)}>حذف</button>
             </div>
 
-            {/* Math toolbar */}
-            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:6,padding:"6px 8px",background:"#f0f9ff",borderRadius:8,border:"1px solid #bae6fd",alignItems:"center"}}>
-              <span style={{fontSize:11,fontWeight:800,color:"#0369a1",marginLeft:4}}>🔢 رياضيات:</span>
-              {/* Fraction builder */}
-              <button title="أدرج كسراً" onMouseDown={e=>{
-                e.preventDefault();
-                const num=prompt("البسط (الرقم العلوي):");
-                if(num===null||num==="") return;
-                const den=prompt("المقام (الرقم السفلي):");
-                if(den===null||den==="") return;
-                onUpdateQ(q.id,"text",(q.text||"")+"["+num+"/"+den+"]");
-              }} style={{background:"white",border:"1px solid #bae6fd",borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#0369a1",fontFamily:"Tajawal"}}>
-                ½ كسر
-              </button>
-              {/* Common fractions */}
-              {[["½","[1/2]"],["⅓","[1/3]"],["¼","[1/4]"],["¾","[3/4]"],["²⁄₃","[2/3]"],["³⁄₄","[3/4]"]].map(([label,val])=>(
-                <button key={val+label} title={label} onMouseDown={e=>{e.preventDefault();onUpdateQ(q.id,"text",(q.text||"")+val);}}
-                  style={{background:"white",border:"1px solid #bae6fd",borderRadius:6,padding:"3px 7px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#0369a1"}}>
-                  {label}
-                </button>
-              ))}
-              {/* Math symbols */}
-              {[["²","²"],["³","³"],["√","√"],["×","×"],["÷","÷"],["≠","≠"],["≤","≤"],["≥","≥"],["π","π"],["∞","∞"]].map(([label,val])=>(
-                <button key={val} title={val} onMouseDown={e=>{e.preventDefault();onUpdateQ(q.id,"text",(q.text||"")+val);}}
-                  style={{background:"white",border:"1px solid #e0f2fe",borderRadius:6,padding:"3px 7px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#334155"}}>
-                  {label}
-                </button>
-              ))}
-            </div>
-
             <textarea className="inp" placeholder="نص السؤال (اختياري إذا كان السؤال صورة فقط)" value={q.text} onChange={e=>onUpdateQ(q.id,"text",e.target.value)} style={{marginBottom:10,minHeight:60}}/>
 
             <div style={{marginBottom:12}}>
               {q.image?(
-                <div>
-                  {/* Size controls */}
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-                    <label style={{fontSize:12,fontWeight:700,color:"#475569",flexShrink:0}}>📐 حجم الصورة:</label>
-                    <select
-                      value={q.imgSize||"medium"}
-                      onChange={e=>onUpdateQ(q.id,"imgSize",e.target.value)}
-                      style={{padding:"5px 10px",border:"2px solid #e2e8f0",borderRadius:8,fontFamily:"Tajawal",fontSize:12,fontWeight:700,color:"#334155",background:"white",cursor:"pointer"}}>
-                      <option value="small">صغير (25%)</option>
-                      <option value="medium">متوسط (50%)</option>
-                      <option value="large">كبير (75%)</option>
-                      <option value="full">كامل (100%)</option>
-                      <option value="custom">مخصص</option>
-                    </select>
-                    {(q.imgSize==="custom")&&(
-                      <div style={{display:"flex",alignItems:"center",gap:5}}>
-                        <input type="range" min={10} max={100} value={q.imgCustomPct||50}
-                          onChange={e=>onUpdateQ(q.id,"imgCustomPct",Number(e.target.value))}
-                          style={{width:100}}/>
-                        <span style={{fontSize:12,fontWeight:700,color:"#475569",minWidth:35}}>{q.imgCustomPct||50}%</span>
-                      </div>
-                    )}
-                    <span style={{fontSize:11,color:"#94a3b8"}}>أو اسحب حدود الصورة ↕</span>
-                  </div>
-                  {/* Resizable image */}
-                  <div style={{position:"relative",display:"inline-block",width:
-                    q.imgSize==="small"?"25%":
-                    q.imgSize==="large"?"75%":
-                    q.imgSize==="full"?"100%":
-                    q.imgSize==="custom"?`${q.imgCustomPct||50}%`:
-                    "50%"
-                  }}>
-                    <div style={{
-                      resize:"both",overflow:"hidden",
-                      border:"2px solid #2563eb",borderRadius:10,
-                      minWidth:60,minHeight:40,
-                      display:"inline-block",width:"100%"
-                    }}>
-                      <img src={q.image} alt="" style={{width:"100%",height:"100%",objectFit:"contain",display:"block",borderRadius:8,background:"#f8fafc"}}/>
-                    </div>
-                    <button className="btn" style={{position:"absolute",top:6,left:6,background:"rgba(0,0,0,.75)",color:"white",border:"none",borderRadius:7,padding:"4px 10px",fontSize:12}} onClick={()=>onUpdateQ(q.id,"image",null)}>✕ حذف</button>
-                  </div>
+                <div style={{position:"relative"}}>
+                  <img src={q.image} alt="" style={{width:"100%",maxHeight:220,objectFit:"contain",borderRadius:10,border:"2px solid #e2e8f0"}}/>
+                  <button className="btn" style={{position:"absolute",top:8,left:8,background:"rgba(0,0,0,.7)",color:"white",border:"none",borderRadius:7,padding:"5px 12px",fontSize:13}} onClick={()=>onUpdateQ(q.id,"image",null)}>✕ حذف الصورة</button>
                 </div>
               ):(
                 <div>
@@ -1406,6 +1310,105 @@ function ChartLine({data,labels,title}){
     return ()=>ch.destroy();
   },[]);
   return <canvas ref={ref} style={{maxHeight:200}}/>;
+}
+
+/* ─── PARTICIPATION TAB ─── */
+function ParticipationTab({results,titles,studentRoster}){
+  const studentMap={};
+  results.forEach(r=>{
+    const key=r.number;
+    if(!studentMap[key]) studentMap[key]={name:r.name,number:r.number,cls:r.cls,exams:new Set(),scores:[]};
+    studentMap[key].exams.add(r.examTitle);
+    const pct=r.res.maxTotal?Math.round(r.res.total/r.res.maxTotal*100):0;
+    studentMap[key].scores.push(pct);
+  });
+  const allP=Object.values(studentMap).filter(s=>s.exams.size===titles.length);
+  const partialP=Object.values(studentMap).filter(s=>s.exams.size>0&&s.exams.size<titles.length);
+  const neverP=studentRoster.length>0?studentRoster.filter(rs=>!studentMap[rs.number]):[];
+  const neverCount=studentRoster.length>0?neverP.length:Math.max(0,140-Object.keys(studentMap).length);
+  if(titles.length<2) return (
+    <div className="card" style={{padding:"14px",background:"#fffbeb",border:"2px solid #fde68a",textAlign:"center"}}>
+      <p style={{fontSize:13,color:"#92400e",fontWeight:700}}>يحتاج اختبارين على الأقل</p>
+    </div>
+  );
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}}>
+        <div className="card" style={{padding:"12px",textAlign:"center",background:"#dcfce7",border:"2px solid #86efac"}}>
+          <p style={{fontSize:28,fontWeight:900,color:"#166534"}}>{allP.length}</p>
+          <p style={{fontSize:11,fontWeight:700,color:"#166534",marginTop:2}}>✅ شاركوا في الكل</p>
+        </div>
+        <div className="card" style={{padding:"12px",textAlign:"center",background:"#fef3c7",border:"2px solid #fbbf24"}}>
+          <p style={{fontSize:28,fontWeight:900,color:"#d97706"}}>{partialP.length}</p>
+          <p style={{fontSize:11,fontWeight:700,color:"#d97706",marginTop:2}}>⚠️ جزئية</p>
+        </div>
+        <div className="card" style={{padding:"12px",textAlign:"center",background:"#fee2e2",border:"2px solid #fca5a5"}}>
+          <p style={{fontSize:28,fontWeight:900,color:"#dc2626"}}>{neverCount}</p>
+          <p style={{fontSize:11,fontWeight:700,color:"#dc2626",marginTop:2}}>❌ لم يشاركوا</p>
+        </div>
+      </div>
+      {allP.length>0&&(
+        <div className="card" style={{marginBottom:12,border:"2px solid #86efac"}}>
+          <p style={{fontWeight:900,fontSize:14,color:"#166534",marginBottom:10}}>✅ شاركوا في الكل ({allP.length})</p>
+          {allP.sort((a,b)=>(b.scores.reduce((x,y)=>x+y,0)/b.scores.length)-(a.scores.reduce((x,y)=>x+y,0)/a.scores.length)).map((s,idx)=>{
+            const avg=Math.round(s.scores.reduce((x,y)=>x+y,0)/s.scores.length);
+            const g=gradeInfo(avg);
+            return (
+              <div key={s.number} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:"#f0fdf4",borderRadius:8,marginBottom:6}}>
+                <span style={{width:24,height:24,borderRadius:6,background:idx<3?"#fbbf24":"#dcfce7",color:idx<3?"#78350f":"#166534",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900}}>{idx+1}</span>
+                <div style={{flex:1}}>
+                  <p style={{fontWeight:700,fontSize:13,color:"#1e293b"}}>{s.name}</p>
+                  <p style={{fontSize:11,color:"#94a3b8"}}>رقم: {s.number} • {s.cls}</p>
+                </div>
+                <div style={{textAlign:"center"}}>
+                  <p style={{fontSize:17,fontWeight:900,color:g.color}}>{avg}%</p>
+                  <span className="badge" style={{background:g.bg,color:g.color,fontSize:10}}>{g.label}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {partialP.length>0&&(
+        <div className="card" style={{marginBottom:12,border:"2px solid #fbbf24"}}>
+          <p style={{fontWeight:900,fontSize:14,color:"#d97706",marginBottom:10}}>⚠️ جزئية ({partialP.length})</p>
+          {partialP.sort((a,b)=>b.exams.size-a.exams.size).map(s=>{
+            const avg=Math.round(s.scores.reduce((x,y)=>x+y,0)/s.scores.length);
+            const g=gradeInfo(avg);
+            return (
+              <div key={s.number} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",background:"#fffbeb",borderRadius:8,marginBottom:5}}>
+                <div style={{flex:1}}>
+                  <p style={{fontWeight:700,fontSize:13,color:"#1e293b"}}>{s.name}</p>
+                  <p style={{fontSize:11,color:"#94a3b8"}}>رقم: {s.number} • {s.cls}</p>
+                </div>
+                <span style={{fontSize:11,fontWeight:700,color:"#d97706",background:"#fef3c7",padding:"2px 8px",borderRadius:6}}>{s.exams.size}/{titles.length}</span>
+                <span style={{fontSize:13,fontWeight:900,color:g.color}}>{avg}%</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {studentRoster.length>0&&neverP.length>0&&(
+        <div className="card" style={{border:"2px solid #fca5a5"}}>
+          <p style={{fontWeight:900,fontSize:14,color:"#dc2626",marginBottom:10}}>❌ لم يشاركوا ({neverP.length})</p>
+          {neverP.map(s=>(
+            <div key={s.number} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",background:"#fef2f2",borderRadius:8,marginBottom:5}}>
+              <div style={{flex:1}}>
+                <p style={{fontWeight:700,fontSize:13,color:"#1e293b"}}>{s.name}</p>
+                <p style={{fontSize:11,color:"#94a3b8"}}>رقم: {s.number} • {s.cls}</p>
+              </div>
+              <span style={{fontSize:11,fontWeight:700,color:"#dc2626"}}>لم يشارك</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {studentRoster.length===0&&(
+        <div className="card" style={{padding:"14px",background:"#fffbeb",border:"2px solid #fde68a",textAlign:"center"}}>
+          <p style={{fontSize:13,color:"#92400e",fontWeight:700}}>💡 ارفع كشف الطلاب من الإعدادات لمعرفة غير المشاركين بالاسم</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ─── ALL RESULTS ─── */
@@ -1693,214 +1696,17 @@ function AllResultsScreen({results,exams,onClearResults,studentRoster,onBack}){
         </div>
       ))}
 
-      ))}
-
       {/* ── PARTICIPATION TAB ── */}
       {tab==="participation"&&(
-        <div>
-          <div className="card" style={{marginBottom:14,padding:"14px 18px",background:"linear-gradient(135deg,#0f172a,#1e3a8a)",border:"none"}}>
-            <p style={{color:"#93c5fd",fontSize:13,fontWeight:700,marginBottom:4}}>إحصائية المشاركة لكل اختبار</p>
-            <p style={{color:"white",fontSize:11,opacity:.7}}>عدد الطلاب الكلي: 140 طالب</p>
-          </div>
-          {titles.length===0?(
-            <div className="card" style={{textAlign:"center",color:"#94a3b8",padding:40}}>
-              <p style={{fontSize:36,marginBottom:10}}>📭</p>
-              <p>لا توجد اختبارات بعد</p>
-            </div>
-          ):(
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {titles.map((title,i)=>{
-                const examRes=results.filter(r=>r.examTitle===title);
-                const uniqueStudents=[...new Set(examRes.map(r=>r.number))].length;
-                const pct=Math.round(uniqueStudents/140*100);
-                const avgPct=examRes.length?(examRes.reduce((a,r)=>a+(r.res.maxTotal?r.res.total/r.res.maxTotal*100:0),0)/examRes.length).toFixed(1):0;
-                const g=gradeInfo(Number(avgPct));
-                const colors=["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4"];
-                const color=colors[i%colors.length];
-                return (
-                  <div key={title} className="card" style={{padding:"16px 18px",border:`2px solid ${color}30`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10,flexWrap:"wrap",gap:8}}>
-                      <div>
-                        <p style={{fontWeight:800,fontSize:15,color:"#1e293b",marginBottom:3}}>{title}</p>
-                        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                          <span style={{fontSize:12,color:"#64748b"}}>👥 {uniqueStudents} طالب شارك</span>
-                          <span style={{fontSize:12,color:"#64748b"}}>•</span>
-                          <span style={{fontSize:12,color:"#64748b"}}>📝 {examRes.length} محاولة</span>
-                          <span style={{fontSize:12,color:"#64748b"}}>•</span>
-                          <span className="badge" style={{background:g.bg,color:g.color,fontSize:11}}>متوسط {avgPct}% — {g.label}</span>
-                        </div>
-                      </div>
-                      <div style={{textAlign:"center",flexShrink:0}}>
-                        <p style={{fontSize:28,fontWeight:900,color}}>{pct}%</p>
-                        <p style={{fontSize:11,color:"#94a3b8"}}>نسبة التغطية</p>
-                      </div>
-                    </div>
-                    {/* Progress bar */}
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{flex:1,height:10,background:"#f1f5f9",borderRadius:5,overflow:"hidden"}}>
-                        <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:5,transition:"width .5s"}}/>
-                      </div>
-                      <span style={{fontSize:12,fontWeight:700,color,minWidth:40}}>{uniqueStudents}/140</span>
-                    </div>
-                    {/* Level distribution */}
-                    {examRes.length>0&&(()=>{
-                      const lvls={ممتاز:0,"جيد جداً":0,جيد:0,مقبول:0,ضعيف:0};
-                      examRes.forEach(r=>{const p=r.res.maxTotal?Math.round(r.res.total/r.res.maxTotal*100):0;const l=gradeInfo(p).label;lvls[l]=(lvls[l]||0)+1;});
-                      return (
-                        <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
-                          {[["ممتاز","#166534","#dcfce7"],["جيد جداً","#1e40af","#dbeafe"],["جيد","#6b21a8","#f3e8ff"],["مقبول","#9a3412","#ffedd5"],["ضعيف","#991b1b","#fee2e2"]].map(([lbl,c,bg])=>
-                            lvls[lbl]>0&&(
-                              <span key={lbl} style={{background:bg,color:c,borderRadius:8,padding:"3px 10px",fontSize:11,fontWeight:700}}>
-                                {lbl}: {lvls[lbl]}
-                              </span>
-                            )
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                );
-              })}
-
-              {/* Overall summary */}
-              <div className="card" style={{padding:"16px 18px",background:"linear-gradient(135deg,#1e3a8a,#2563eb)",border:"none",marginTop:4}}>
-                <p style={{color:"#93c5fd",fontSize:12,marginBottom:10,fontWeight:700}}>📊 ملخص المشاركة الكلية</p>
-                <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
-                  <div><p style={{fontSize:11,color:"#93c5fd"}}>إجمالي الاختبارات</p><p style={{fontSize:24,fontWeight:900,color:"white"}}>{titles.length}</p></div>
-                  <div><p style={{fontSize:11,color:"#93c5fd"}}>إجمالي المحاولات</p><p style={{fontSize:24,fontWeight:900,color:"white"}}>{results.length}</p></div>
-                  <div><p style={{fontSize:11,color:"#93c5fd"}}>طلاب مشاركون</p><p style={{fontSize:24,fontWeight:900,color:"#fbbf24"}}>{[...new Set(results.map(r=>r.number))].length}</p></div>
-                  <div><p style={{fontSize:11,color:"#93c5fd"}}>متوسط التغطية</p><p style={{fontSize:24,fontWeight:900,color:"#86efac"}}>{titles.length?Math.round(titles.reduce((a,t)=>{const u=[...new Set(results.filter(r=>r.examTitle===t).map(r=>r.number))].length;return a+u/140*100;},0)/titles.length):0}%</p></div>
-                </div>
-              </div>
-
-              {/* Students who participated in ALL exams */}
-              {titles.length>1&&(()=>{
-                const allExamTitles=titles;
-                // Build student map from results
-                const studentMap={};
-                results.forEach(r=>{
-                  const key=r.number||r.name;
-                  if(!studentMap[key]) studentMap[key]={name:r.name,number:r.number,cls:r.cls,exams:new Set(),scores:[]};
-                  studentMap[key].exams.add(r.examTitle);
-                  const pct=r.res.maxTotal?Math.round(r.res.total/r.res.maxTotal*100):0;
-                  studentMap[key].scores.push(pct);
-                });
-
-                // Use roster if available, otherwise use 140
-                const totalCount=studentRoster.length||140;
-                const allParticipants=Object.values(studentMap).filter(s=>s.exams.size===allExamTitles.length);
-                const partialParticipants=Object.values(studentMap).filter(s=>s.exams.size>0&&s.exams.size<allExamTitles.length);
-
-                // Students who never participated (from roster)
-                const neverParticipated=studentRoster.length>0
-                  ? studentRoster.filter(rs=>!studentMap[rs.number]&&!studentMap[rs.name])
-                  : [];
-                const neverCount=studentRoster.length>0 ? neverParticipated.length : totalCount-Object.keys(studentMap).length;
-
-                return (
-                  <div>
-                    {/* Stats row */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginTop:4,marginBottom:12}}>
-                      <div className="card" style={{padding:"12px 14px",textAlign:"center",background:"#dcfce7",border:"2px solid #86efac"}}>
-                        <p style={{fontSize:28,fontWeight:900,color:"#166534"}}>{allParticipants.length}</p>
-                        <p style={{fontSize:11,fontWeight:700,color:"#166534",marginTop:2}}>✅ شاركوا في الكل</p>
-                      </div>
-                      <div className="card" style={{padding:"12px 14px",textAlign:"center",background:"#fef3c7",border:"2px solid #fbbf24"}}>
-                        <p style={{fontSize:28,fontWeight:900,color:"#d97706"}}>{partialParticipants.length}</p>
-                        <p style={{fontSize:11,fontWeight:700,color:"#d97706",marginTop:2}}>⚠️ شاركوا جزئياً</p>
-                      </div>
-                      <div className="card" style={{padding:"12px 14px",textAlign:"center",background:"#fee2e2",border:"2px solid #fca5a5"}}>
-                        <p style={{fontSize:28,fontWeight:900,color:"#dc2626"}}>{neverCount>0?neverCount:0}</p>
-                        <p style={{fontSize:11,fontWeight:700,color:"#dc2626",marginTop:2}}>❌ لم يشاركوا</p>
-                      </div>
-                    </div>
-
-                    {/* All participants */}
-                    {allParticipants.length>0&&(
-                      <div className="card" style={{padding:"16px 18px",border:"2px solid #86efac",marginBottom:12}}>
-                        <p style={{fontWeight:900,fontSize:14,color:"#166534",marginBottom:12}}>✅ شاركوا في جميع الاختبارات ({allParticipants.length})</p>
-                        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                          {allParticipants.sort((a,b)=>{
-                            const avgA=a.scores.reduce((x,y)=>x+y,0)/a.scores.length;
-                            const avgB=b.scores.reduce((x,y)=>x+y,0)/b.scores.length;
-                            return avgB-avgA;
-                          }).map((s,idx)=>{
-                            const avg=Math.round(s.scores.reduce((x,y)=>x+y,0)/s.scores.length);
-                            const g=gradeInfo(avg);
-                            return (
-                              <div key={s.number} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"#f0fdf4",borderRadius:9}}>
-                                <div style={{width:26,height:26,borderRadius:7,background:idx<3?"#fbbf24":"#dcfce7",color:idx<3?"#78350f":"#166534",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,flexShrink:0}}>{idx+1}</div>
-                                <div style={{flex:1}}>
-                                  <p style={{fontWeight:700,fontSize:13,color:"#1e293b"}}>{s.name}</p>
-                                  <p style={{fontSize:11,color:"#94a3b8"}}>رقم: {s.number} • فصل: {s.cls}</p>
-                                </div>
-                                <div style={{textAlign:"center"}}>
-                                  <p style={{fontSize:18,fontWeight:900,color:g.color}}>{avg}%</p>
-                                  <span className="badge" style={{background:g.bg,color:g.color,fontSize:10}}>{g.label}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Partial participants */}
-                    {partialParticipants.length>0&&(
-                      <div className="card" style={{padding:"16px 18px",border:"2px solid #fbbf24",marginBottom:12}}>
-                        <p style={{fontWeight:900,fontSize:14,color:"#d97706",marginBottom:12}}>⚠️ شاركوا جزئياً ({partialParticipants.length})</p>
-                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                          {partialParticipants.sort((a,b)=>b.exams.size-a.exams.size).map(s=>{
-                            const avg=Math.round(s.scores.reduce((x,y)=>x+y,0)/s.scores.length);
-                            const g=gradeInfo(avg);
-                            return (
-                              <div key={s.number} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"#fffbeb",borderRadius:9}}>
-                                <div style={{flex:1}}>
-                                  <p style={{fontWeight:700,fontSize:13,color:"#1e293b"}}>{s.name}</p>
-                                  <p style={{fontSize:11,color:"#94a3b8"}}>رقم: {s.number} • فصل: {s.cls}</p>
-                                </div>
-                                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                                  <span style={{fontSize:12,fontWeight:700,color:"#d97706",background:"#fef3c7",padding:"3px 10px",borderRadius:7}}>{s.exams.size}/{allExamTitles.length} اختبارات</span>
-                                  <span style={{fontSize:13,fontWeight:900,color:g.color}}>{avg}%</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Never participated - from roster */}
-                    {studentRoster.length>0&&neverParticipated.length>0&&(
-                      <div className="card" style={{padding:"16px 18px",border:"2px solid #fca5a5"}}>
-                        <p style={{fontWeight:900,fontSize:14,color:"#dc2626",marginBottom:12}}>❌ لم يشاركوا في أي اختبار ({neverParticipated.length})</p>
-                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                          {neverParticipated.map(s=>(
-                            <div key={s.number} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",background:"#fef2f2",borderRadius:9}}>
-                              <div style={{flex:1}}>
-                                <p style={{fontWeight:700,fontSize:13,color:"#1e293b"}}>{s.name}</p>
-                                <p style={{fontSize:11,color:"#94a3b8"}}>رقم: {s.number} • فصل: {s.cls}</p>
-                              </div>
-                              <span style={{fontSize:11,fontWeight:700,color:"#dc2626",background:"#fee2e2",padding:"3px 8px",borderRadius:6}}>لم يشارك</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {studentRoster.length===0&&(
-                      <div className="card" style={{padding:"14px 18px",background:"#fffbeb",border:"2px solid #fde68a",textAlign:"center"}}>
-                        <p style={{fontSize:13,color:"#92400e",fontWeight:700}}>💡 ارفع كشف الطلاب من الإعدادات لمعرفة الطلاب غير المشاركين بالاسم</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-        </div>
+        <ParticipationTab results={results} titles={titles} studentRoster={studentRoster}/>
       )}
 
       </div>)}
+    </div>
+  );
+}
+
+/* ─── PASTE IMAGE BOX (per-question) ─── */
 function PasteImageBox({image, onChange}){
   const [active,setActive]=useState(false);
   const boxRef=useRef(null);
@@ -2136,16 +1942,23 @@ function AIImportScreen({apiKey,onSaveExam,onBack}){
 
       setProgress("جارٍ اقتصاص الصور التوضيحية...");
 
-      // Step 2: use full slot image for each question (no cropping)
+      // Step 2: crop images for each question that has imageCrop
       const processedStandards=await Promise.all((parsed.standards||[]).map(async s=>({
         ...s,id:uid(),
         questions:await Promise.all((s.questions||[]).map(async q=>{
-          let questionImage=null;
+          let croppedImage=null;
           if(q.imageCrop && filled[q.imageCrop.slotIndex]){
-            // Use the full slot image instead of cropping
-            questionImage=filled[q.imageCrop.slotIndex].preview;
+            try{
+              const slotPreview=filled[q.imageCrop.slotIndex].preview;
+              croppedImage=await cropImage(slotPreview,{
+                x:q.imageCrop.x,
+                y:q.imageCrop.y,
+                w:q.imageCrop.w,
+                h:q.imageCrop.h
+              });
+            }catch(e){ croppedImage=null; }
           }
-          return {...q,id:uid(),grade:Number(q.grade)||2,correct:Number(q.correct)||0,feedback:q.feedback||"",image:questionImage};
+          return {...q,id:uid(),grade:Number(q.grade)||2,correct:Number(q.correct)||0,feedback:q.feedback||"",image:croppedImage};
         }))
       })));
 
