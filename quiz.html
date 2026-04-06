@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -942,39 +943,60 @@ function AdminPanel({exams,allResults,onNewExam,showNewExam,newTitle,setNewTitle
             <p style={{fontSize:11,color:"#78350f",marginTop:5}}>احصل على المفتاح من: console.anthropic.com &nbsp;•&nbsp; {apiKey?"✅ محفوظ":"❌ غير محفوظ"}</p>
           </div>
           <div style={{marginTop:12,paddingTop:12,borderTop:"1px dashed #fde68a"}}>
-            <label style={{fontSize:12,fontWeight:700,color:"#92400e",display:"block",marginBottom:6}}>📋 كشف الطلاب (CSV)</label>
-            <input ref={rosterRef} type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>{
-              const file=e.target.files[0]; if(!file) return;
-              const reader=new FileReader();
-              reader.onload=ev=>{
-                const lines=(ev.target.result).split(/\r?\n/).filter(l=>l.trim());
-                const roster=[];
-                lines.forEach((line,i)=>{
-                  if(i===0&&(line.includes("اسم")||line.toLowerCase().includes("name"))) return;
-                  const cols=line.split(/,|\t/);
-                  const name=(cols[0]||"").trim().replace(/"/g,"");
-                  const number=(cols[1]||"").trim().replace(/"/g,"");
-                  const cls=(cols[2]||"").trim().replace(/"/g,"");
-                  if(name&&name.length>1) roster.push({name,number:number||String(i),cls:cls||"غير محدد"});
-                });
-                if(roster.length>0){onSaveRoster(roster);alert("✅ تم استيراد "+roster.length+" طالب");}
-                else alert("لم يتم العثور على بيانات. الصيغة: الاسم، الرقم، الفصل");
-              };
-              reader.readAsText(file,"utf-8");
-              e.target.value="";
-            }}/>
-            <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-              <button className="btn" style={{background:"#166534",color:"white",border:"none",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:700}} onClick={()=>rosterRef.current&&rosterRef.current.click()}>
-                📥 رفع كشف الطلاب CSV
-              </button>
-              {studentRoster.length>0&&(
-                <span style={{fontSize:12,color:"#166534",fontWeight:700}}>✅ {studentRoster.length} طالب محمّل</span>
-              )}
-              {studentRoster.length>0&&(
-                <button onClick={()=>{if(window.confirm("حذف كشف الطلاب؟")) onSaveRoster([]);}} style={{background:"#fef2f2",color:"#ef4444",border:"1px solid #fca5a5",borderRadius:7,padding:"4px 10px",fontSize:11,cursor:"pointer",fontFamily:"Tajawal"}}>🗑</button>
-              )}
+            <label style={{fontSize:12,fontWeight:700,color:"#92400e",display:"block",marginBottom:8}}>📋 كشوف الطلاب — ٤ فصول</label>
+            <p style={{fontSize:11,color:"#78350f",marginBottom:10}}>صيغة CSV: عمود١=الاسم، عمود٢=الرقم، عمود٣=الفصل (اختياري)</p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+              {["الفصل الأول","الفصل الثاني","الفصل الثالث","الفصل الرابع"].map((cls,ci)=>{
+                const clsStudents=studentRoster.filter(s=>s._cls===ci);
+                return (
+                  <div key={ci} style={{background:"#f0fdf4",borderRadius:10,padding:"10px 12px",border:"1px solid #86efac"}}>
+                    <p style={{fontSize:12,fontWeight:800,color:"#166534",marginBottom:6}}>{cls}</p>
+                    <p style={{fontSize:11,color:"#64748b",marginBottom:6}}>
+                      {clsStudents.length>0?`✅ ${clsStudents.length} طالب`:"لم يُرفع بعد"}
+                    </p>
+                    <div style={{display:"flex",gap:5}}>
+                      <label style={{flex:1,background:"#166534",color:"white",borderRadius:7,padding:"5px 8px",fontSize:11,fontWeight:700,cursor:"pointer",textAlign:"center",display:"block"}}>
+                        📥 رفع
+                        <input type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>{
+                          const file=e.target.files[0]; if(!file) return;
+                          const reader=new FileReader();
+                          reader.onload=ev=>{
+                            const lines=(ev.target.result).split(/\r?\n/).filter(l=>l.trim());
+                            const newStudents=[];
+                            lines.forEach((line,i)=>{
+                              if(i===0&&(line.includes("اسم")||line.toLowerCase().includes("name"))) return;
+                              const cols=line.split(/,|\t/);
+                              const name=(cols[0]||"").trim().replace(/"/g,"");
+                              const number=(cols[1]||"").trim().replace(/"/g,"");
+                              const clsName=(cols[2]||cls).trim().replace(/"/g,"");
+                              if(name&&name.length>1) newStudents.push({name,number:number||String(i),cls:clsName,_cls:ci});
+                            });
+                            if(newStudents.length>0){
+                              const others=studentRoster.filter(s=>s._cls!==ci);
+                              onSaveRoster([...others,...newStudents]);
+                              alert("✅ تم استيراد "+newStudents.length+" طالب في "+cls);
+                            } else {
+                              alert("لم يتم العثور على بيانات");
+                            }
+                          };
+                          reader.readAsText(file,"utf-8");
+                          e.target.value="";
+                        }}/>
+                      </label>
+                      {clsStudents.length>0&&(
+                        <button onClick={()=>{if(window.confirm("حذف "+cls+"؟")){onSaveRoster(studentRoster.filter(s=>s._cls!==ci));}}} style={{background:"#fef2f2",color:"#ef4444",border:"1px solid #fca5a5",borderRadius:7,padding:"5px 8px",fontSize:11,cursor:"pointer",fontFamily:"Tajawal"}}>🗑</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <p style={{fontSize:11,color:"#78350f",marginTop:5}}>عمود١=الاسم، عمود٢=الرقم، عمود٣=الفصل</p>
+            {studentRoster.length>0&&(
+              <div style={{marginTop:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:12,color:"#166534",fontWeight:700}}>✅ إجمالي: {studentRoster.length} طالب</span>
+                <button onClick={()=>{if(window.confirm("حذف جميع الكشوف؟")) onSaveRoster([]);}} style={{background:"#fef2f2",color:"#ef4444",border:"1px solid #fca5a5",borderRadius:7,padding:"4px 10px",fontSize:11,cursor:"pointer",fontFamily:"Tajawal"}}>🗑 حذف الكل</button>
+              </div>
+            )}
           </div>
         </div>
       )}
