@@ -1422,16 +1422,20 @@ function updateHeader(){
 function showPage(id){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function goBack(){ FILE=null; showPage('pgHome'); renderHomeCards(); }
 function showAdminPage(){
-  restoreAdminPage();
+  // Remove eval page if exists
+  const ep=document.getElementById('pgEval');
+  if(ep) ep.remove();
   showPage('pgAdmin');
+  loadAdmin();
 }
 
-// Auto-refresh admin every 30 seconds when on admin page
+// Auto-refresh admin every 60 seconds
 setInterval(()=>{
-  if(CU&&CU.role==='admin'&&document.getElementById('pgAdmin').classList.contains('active')&&!document.getElementById('teacherEvalWrap')){
+  const pg=document.getElementById('pgAdmin');
+  if(CU&&CU.role==='admin'&&pg&&pg.classList.contains('active')){
     loadAdmin();
   }
-},30000);
+},60000);
 
 /* ════════════════════════════════════════════════
    OPEN FILE
@@ -2014,13 +2018,11 @@ let EVAL_TEACHER_EMAIL = null;
 
 async function openTeacherEval(email){
   EVAL_TEACHER_EMAIL = email;
-  // Show loading state
-  document.getElementById('pgAdmin').innerHTML=`<div style="text-align:center;padding:60px;color:#888;font-family:Cairo,sans-serif">⏳ جاري تحميل بيانات المعلم...</div>`;
-  showPage('pgAdmin');
+  showToast('⏳ جاري تحميل البيانات...');
 
   const users=await getUsers();
   const u=users[email];
-  if(!u){ showToast('خطأ: لم يتم العثور على المعلم'); restoreAdminPage(); return; }
+  if(!u){ showToast('خطأ: لم يتم العثور على المعلم'); return; }
   const data=await getData(email);
   const evals=(data.teacher&&data.teacher.evaluations)||{};
 
@@ -2078,8 +2080,16 @@ async function openTeacherEval(email){
 
   html+=`</div></div>`;
 
-  // Show in admin page area
-  document.getElementById('pgAdmin').innerHTML=`<div id="teacherEvalWrap">${html}</div>`;
+  // Use dedicated eval page
+  let evalPage = document.getElementById('pgEval');
+  if(!evalPage){
+    evalPage = document.createElement('div');
+    evalPage.id = 'pgEval';
+    evalPage.className = 'page';
+    document.body.appendChild(evalPage);
+  }
+  evalPage.innerHTML = `<div id="teacherEvalWrap">${html}</div>`;
+  showPage('pgEval');
 }
 
 function restoreAdminPage(){
@@ -2108,6 +2118,7 @@ function restoreAdminPage(){
 }
 
 async function viewReport(email,key){
+  showToast('⏳ جاري تحضير التقرير...');
   const users=await getUsers();
   const u=users[email];
   if(!u){ showToast('خطأ: لم يتم العثور على المعلم'); return; }
