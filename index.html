@@ -1072,17 +1072,35 @@ let TMP_CAPTIONS = ['','','','',''];
 ════════════════════════════════════════════════ */
 let db, fstorage, fbReady = false;
 
+// ── Firebase auto-init with embedded fallback config ──
+const EMBEDDED_FB_CONFIG = {
+  apiKey: "AIzaSyCi0S10Vy2lLTzQyUU0wGE3zS55mhTpfwo",
+  authDomain: "faza-obidah.firebaseapp.com",
+  projectId: "faza-obidah",
+  storageBucket: "faza-obidah.firebasestorage.app",
+  messagingSenderId: "392621620098",
+  appId: "1:392621620098:web:5381d6e9236080cde02d9b"
+};
+
 function getFbConfig(){
-  try{ return JSON.parse(localStorage.getItem('ub_fb_config')||'null'); }catch{ return null; }
+  try{
+    const saved=JSON.parse(localStorage.getItem('ub_fb_config')||'null');
+    return saved||EMBEDDED_FB_CONFIG;
+  }catch{ return EMBEDDED_FB_CONFIG; }
 }
 
 function saveFbConfig(){
   const raw = document.getElementById('fbConfigInput').value.trim();
-  // Extract the object from the pasted code
   try{
     const match = raw.match(/\{[\s\S]*\}/);
     if(!match) throw new Error('no object');
-    const cfg = eval('('+match[0]+')');
+    // Safe parse without eval
+    const cfg = JSON.parse(match[0]
+      .replace(/(\w+):/g,'"$1":')
+      .replace(/'/g,'"')
+      .replace(/,\s*\}/g,'}')
+      .replace(/"\s*:\s*"([^"]*)"(\s*[,}])/g,'":"$1"$2')
+    );
     if(!cfg.apiKey||!cfg.projectId) throw new Error('missing keys');
     localStorage.setItem('ub_fb_config', JSON.stringify(cfg));
     document.getElementById('fbSetupErr').style.display='none';
@@ -1093,15 +1111,23 @@ function saveFbConfig(){
       document.getElementById('fbSetupErr').style.display='block';
     });
   }catch(e){
-    document.getElementById('fbSetupErr').style.display='block';
+    // Try with embedded config
+    initFirebase(EMBEDDED_FB_CONFIG).then(()=>{
+      localStorage.setItem('ub_fb_config', JSON.stringify(EMBEDDED_FB_CONFIG));
+      document.getElementById('fbSetupOverlay').style.display='none';
+      showToast('✅ تم الاتصال بقاعدة البيانات');
+    }).catch(()=>{
+      document.getElementById('fbSetupErr').style.display='block';
+    });
   }
 }
 
 async function initFirebase(cfg){
   try{
+    if(typeof firebase==='undefined') throw new Error('Firebase SDK not loaded');
     if(!firebase.apps.length) firebase.initializeApp(cfg);
+    else firebase.app(); // use existing
     db = firebase.firestore();
-    fstorage = firebase.storage();
     await db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
     fbReady = true;
     console.log('Firebase connected ✓');
@@ -1241,14 +1267,35 @@ async function saveData(email, data){
   }
 }
 
-// ── Admin config (keep in localStorage only) ──
+// ── Admin config (Firebase + localStorage) ──
+async function getAdminConfigAsync(){
+  // Try Firebase first
+  if(fbReady){
+    try{
+      const doc=await db.collection('config').doc('admin').get();
+      if(doc.exists){
+        const cfg=doc.data();
+        localStorage.setItem('ub_admin_cfg',JSON.stringify(cfg));
+        return {nationalId:cfg.nationalId||'1234567890',password:cfg.password||'admin123',name:cfg.name||'مدير المدرسة'};
+      }
+    }catch(e){}
+  }
+  // Fallback to localStorage
+  try{
+    const cfg=JSON.parse(localStorage.getItem('ub_admin_cfg')||'{}');
+    return {nationalId:cfg.nationalId||'1234567890',password:cfg.password||'admin123',name:cfg.name||'مدير المدرسة'};
+  }catch{ return {nationalId:'1234567890',password:'admin123',name:'مدير المدرسة'}; }
+}
 const getAdminConfig = ()=>{
   try{
     const cfg=JSON.parse(localStorage.getItem('ub_admin_cfg')||'{}');
-    return {nationalId:cfg.nationalId||'1234567890', password:cfg.password||'admin123', name:cfg.name||'مدير المدرسة'};
+    return {nationalId:cfg.nationalId||'1234567890',password:cfg.password||'admin123',name:cfg.name||'مدير المدرسة'};
   }catch{ return {nationalId:'1234567890',password:'admin123',name:'مدير المدرسة'}; }
 };
-const saveAdminConfig = cfg => localStorage.setItem('ub_admin_cfg', JSON.stringify(cfg));
+const saveAdminConfig = async cfg=>{
+  localStorage.setItem('ub_admin_cfg',JSON.stringify(cfg));
+  if(fbReady){ try{ await db.collection('config').doc('admin').set(cfg); }catch(e){} }
+};
 
 /* ════════════════════════════════════════════════
    AUTH
@@ -1271,8 +1318,8 @@ async function doLogin(){
   const errEl = document.getElementById('lErr');
   errEl.style.display='none';
 
-  // Admin login
-  const adminCfg = getAdminConfig();
+  // Admin login - check Firebase first for latest password
+  const adminCfg = await getAdminConfigAsync();
   if(input === adminCfg.nationalId && pass === adminCfg.password){
     CU={name:adminCfg.name||'مدير المدرسة', email:'admin', role:'admin', spec:'إدارة', level:'—'};
     updateHeader(); showAdminPage(); return;
@@ -1375,9 +1422,8 @@ function updateHeader(){
 function showPage(id){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
 function goBack(){ FILE=null; showPage('pgHome'); renderHomeCards(); }
 function showAdminPage(){
-  if(document.getElementById('teacherEvalWrap')){ restoreAdminPage(); return; }
+  restoreAdminPage();
   showPage('pgAdmin');
-  loadAdmin();
 }
 
 // Auto-refresh admin every 30 seconds when on admin page
@@ -1968,9 +2014,13 @@ let EVAL_TEACHER_EMAIL = null;
 
 async function openTeacherEval(email){
   EVAL_TEACHER_EMAIL = email;
+  // Show loading state
+  document.getElementById('pgAdmin').innerHTML=`<div style="text-align:center;padding:60px;color:#888;font-family:Cairo,sans-serif">⏳ جاري تحميل بيانات المعلم...</div>`;
+  showPage('pgAdmin');
+
   const users=await getUsers();
   const u=users[email];
-  if(!u){ showToast('خطأ: لم يتم العثور على المعلم'); return; }
+  if(!u){ showToast('خطأ: لم يتم العثور على المعلم'); restoreAdminPage(); return; }
   const data=await getData(email);
   const evals=(data.teacher&&data.teacher.evaluations)||{};
 
@@ -2037,7 +2087,11 @@ function restoreAdminPage(){
     <div class="admin-wrap">
       <div class="sec-ttl" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
         <span>لوحة المتابعة — مدرسة عبيدة بن الحارث المتوسطة</span>
-        <button onclick="loadAdmin()" style="padding:6px 14px;background:var(--green-soft);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;color:var(--green-dark);font-weight:600">🔄 تحديث القائمة</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="openExcelImport()" style="padding:6px 14px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:20px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;color:#2e7d32;font-weight:600">📊 استيراد من Excel</button>
+          <button onclick="openAdminSettings()" style="padding:6px 14px;background:#e3f2fd;border:1px solid #90caf9;border-radius:20px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;color:#1565c0;font-weight:600">⚙️ إعدادات الدخول</button>
+          <button onclick="loadAdmin()" style="padding:6px 14px;background:var(--green-soft);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-family:Cairo,sans-serif;font-size:12px;color:var(--green-dark);font-weight:600">🔄 تحديث القائمة</button>
+        </div>
       </div>
       <div class="at-card">
         <div class="at-hdr teacher-th" style="display:flex;align-items:center;justify-content:space-between">
@@ -2411,7 +2465,7 @@ function closeAdminSettings(){
   document.getElementById('adminSettingsOverlay').style.display='none';
 }
 
-function saveAdminSettings(){
+async function saveAdminSettings(){
   const name  = document.getElementById('cfg_name').value.trim();
   const nid   = document.getElementById('cfg_id').value.trim();
   const pass  = document.getElementById('cfg_pass').value;
@@ -2423,7 +2477,7 @@ function saveAdminSettings(){
   }
   errEl.style.display='none';
   const cfg = { name, nationalId: nid, password: pass };
-  saveAdminConfig(cfg);
+  await saveAdminConfig(cfg);
   // Update current user name in header
   if(CU && CU.role==='admin'){ CU.name = name; updateHeader(); }
   closeAdminSettings();
@@ -2628,16 +2682,19 @@ window.addEventListener('beforeunload',()=>{ if(CU) sessionStorage.setItem('ub_s
 /* ════ FIREBASE AUTO-INIT ON LOAD ════ */
 window.addEventListener('load', async ()=>{
   const cfg = getFbConfig();
-  if(cfg){
-    try{
-      await initFirebase(cfg);
-    }catch(e){
-      console.warn('Firebase init failed, using localStorage fallback');
+  try{
+    await initFirebase(cfg);
+    // Hide setup screen if shown
+    const ov=document.getElementById('fbSetupOverlay');
+    if(ov) ov.style.display='none';
+  }catch(e){
+    console.warn('Firebase init failed:', e);
+    // Show setup screen only if firebase SDK is available but config wrong
+    if(typeof firebase!=='undefined'){
+      const ov=document.getElementById('fbSetupOverlay');
+      if(ov) ov.style.display='flex';
     }
-  } else {
-    // Show Firebase setup on first run
-    const ov = document.getElementById('fbSetupOverlay');
-    if(ov) { ov.style.display='flex'; }
+    // App still works with localStorage fallback
   }
 });
 </script>
