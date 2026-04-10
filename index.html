@@ -2572,33 +2572,56 @@ function handleExcelFile(file){
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
       if(rows.length<2){ errEl.textContent='الملف فارغ'; errEl.style.display='block'; return; }
-      const header=rows[0].map(h=>String(h).trim());
-      const idCol=header.findIndex(h=>h.includes('هوية')||h.includes('رقم'));
-      const nameCol=header.findIndex(h=>h.includes('اسم'));
-      const specCol=header.findIndex(h=>h.includes('تخصص')||h.includes('مادة'));
-      const levelCol=header.findIndex(h=>h.includes('صف')||h.includes('مرحلة'));
-      if(idCol===-1){ errEl.textContent='لم يتم العثور على عمود "رقم الهوية"'; errEl.style.display='block'; return; }
+
+      // Find header row (look for رقم الهوية in any row up to row 20)
+      let headerRowIdx=-1, idCol=-1, nameCol=-1;
+      for(let r=0;r<Math.min(rows.length,20);r++){
+        const row=rows[r];
+        for(let c=0;c<row.length;c++){
+          const v=String(row[c]||'').trim();
+          if(v.includes('هوية') || v.includes('الهوية')){
+            headerRowIdx=r; idCol=c;
+          }
+          if((v.includes('الإسم')||v.includes('الاسم')||v==='اسم') && headerRowIdx===r){
+            nameCol=c;
+          }
+        }
+        if(headerRowIdx===r && idCol>-1) break;
+      }
+
+      if(idCol===-1){
+        // Try first row as header (simple format)
+        const header=rows[0].map(h=>String(h).trim());
+        idCol=header.findIndex(h=>h.includes('هوية')||h.includes('رقم'));
+        nameCol=header.findIndex(h=>h.includes('اسم'));
+        headerRowIdx=0;
+      }
+
+      if(idCol===-1){ errEl.textContent='لم يتم العثور على عمود "رقم الهوية" في الملف'; errEl.style.display='block'; return; }
+
       EXCEL_DATA=[];
-      rows.slice(1).filter(r=>r[idCol]&&String(r[idCol]).trim()).forEach(r=>{
-        EXCEL_DATA.push({
-          nationalId:String(r[idCol]).trim(),
-          name:nameCol>-1&&r[nameCol]?String(r[nameCol]).trim():'—',
-          spec:specCol>-1&&r[specCol]?String(r[specCol]).trim():'—',
-          level:levelCol>-1&&r[levelCol]?String(r[levelCol]).trim():'—',
-        });
+      const dataStart=headerRowIdx+1;
+      rows.slice(dataStart).forEach(r=>{
+        const rawId=r[idCol];
+        if(!rawId&&rawId!==0) return;
+        // Clean ID: remove decimals (Excel stores as float)
+        let nid=String(typeof rawId==='number'?Math.round(rawId):rawId).trim().replace(/\.0+$/,'');
+        if(!nid||nid==='0') return;
+        const name=nameCol>-1&&r[nameCol]?String(r[nameCol]).trim():'—';
+        EXCEL_DATA.push({nationalId:nid, name, spec:'—', level:'—'});
       });
-      if(!EXCEL_DATA.length){ errEl.textContent='لا توجد بيانات صالحة'; errEl.style.display='block'; return; }
+
+      if(!EXCEL_DATA.length){ errEl.textContent='لا توجد بيانات صالحة في الملف'; errEl.style.display='block'; return; }
+
       const tbl=document.getElementById('excelPreviewTable');
       tbl.innerHTML=`<thead style="background:#006C35;color:#fff"><tr>
-        <th style="padding:6px 10px">رقم الهوية</th><th style="padding:6px 10px">الاسم</th>
-        <th style="padding:6px 10px">التخصص</th><th style="padding:6px 10px">الصف</th></tr></thead>
-        <tbody>${EXCEL_DATA.map(r=>`<tr style="border-bottom:1px solid #eee">
+        <th style="padding:6px 10px">رقم الهوية</th>
+        <th style="padding:6px 10px">الاسم</th></tr></thead>
+        <tbody>${EXCEL_DATA.slice(0,10).map(r=>`<tr style="border-bottom:1px solid #eee">
           <td style="padding:5px 10px;font-family:monospace">${r.nationalId}</td>
           <td style="padding:5px 10px">${r.name}</td>
-          <td style="padding:5px 10px">${r.spec}</td>
-          <td style="padding:5px 10px">${r.level}</td>
-        </tr>`).join('')}</tbody>`;
-      document.getElementById('excelImportInfo').innerHTML=`✅ تم العثور على <strong>${EXCEL_DATA.length}</strong> معلم`;
+        </tr>`).join('')}${EXCEL_DATA.length>10?`<tr><td colspan="2" style="padding:5px 10px;color:#888;text-align:center">... و ${EXCEL_DATA.length-10} آخرين</td></tr>`:''}</tbody>`;
+      document.getElementById('excelImportInfo').innerHTML=`✅ تم العثور على <strong>${EXCEL_DATA.length}</strong> معلم جاهز للاستيراد`;
       document.getElementById('excelPreview').style.display='block';
       document.getElementById('excelImportBtn').style.display='block';
     }catch(err){ errEl.textContent='خطأ: '+err.message; errEl.style.display='block'; }
